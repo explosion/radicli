@@ -20,12 +20,14 @@ class Radicli:
     def __init__(
         self,
         name: str,
+        prog: Optional[str] = None,
         help: Optional[str] = None,
         converters: Dict[Any, Callable[[str], Any]] = SimpleFrozenDict(),
         extra_key: str = "_extra",
     ) -> None:
         """Initialize the CLI and create the registry."""
         self.name = name
+        self.prog = prog
         self.help = help
         self.converters = converters
         self.extra_key = extra_key
@@ -73,7 +75,7 @@ class Radicli:
                     default=sig_defaults[param],
                     skip_resolve=converter is not None,
                 )
-                arg.help = f"({get_type_name(arg_type)}) {arg.help or ''}"
+                arg.help = f"{get_type_name(arg_type)} - {arg.help or ''}"
                 cli_args.append(arg)
             cmd = Command(
                 name=name,
@@ -120,7 +122,11 @@ class Radicli:
         allow_extra: bool = False,
     ) -> Dict[str, Any]:
         """Parse a list of arguments. Can also be used for testing."""
-        p = argparse.ArgumentParser(description=description)
+        p = argparse.ArgumentParser(
+            prog=self.prog,
+            description=description,
+            formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+        )
         for arg in arg_info:
             if arg.id == self.extra_key:
                 continue
