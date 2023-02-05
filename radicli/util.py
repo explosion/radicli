@@ -118,6 +118,14 @@ def find_base_type(
     return default_type
 
 
+def get_type_name(arg_type: Any) -> str:
+    """Get a pretty-printed string for a type."""
+    if hasattr(arg_type, "__name__"):
+        return arg_type.__name__
+    type_str = str(arg_type)
+    return type_str.rsplit(".", 1)[-1]
+
+
 class SimpleFrozenDict(dict):
     """Simplified implementation of a frozen dict, mainly used as default
     function or method argument (for arguments that should default to empty

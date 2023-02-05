@@ -3,7 +3,7 @@ import catalogue
 from inspect import signature
 import argparse
 
-from .util import ArgparseArg, Arg, get_arg, SimpleFrozenDict
+from .util import ArgparseArg, Arg, get_arg, get_type_name, SimpleFrozenDict
 
 
 class Radicli:
@@ -11,13 +11,11 @@ class Radicli:
         self,
         name: str,
         help: Optional[str] = None,
-        version: Optional[str] = None,
         converters: Dict[Any, Callable[[str], Any]] = SimpleFrozenDict(),
     ) -> None:
         """Initialize the CLI and create the registry."""
         self.name = name
         self.help = help
-        self.version = version
         self.converters = converters
         self.registry = catalogue.create(self.name, "commands")
 
@@ -50,6 +48,7 @@ class Radicli:
                     default=sig_defaults[param],
                     skip_resolve=converter is not None,
                 )
+                arg.help = f"({get_type_name(arg_type)}) {arg.help or ''}"
                 cli_args.append(arg)
             self.registry.register(name, func=(cli_func, cli_args, cli_func.__doc__))
             return cli_func
@@ -63,14 +62,14 @@ class Radicli:
         """
         import sys
 
-        if len(sys.argv) <= 1:  # TODO: improve this
+        if len(sys.argv) <= 1 or sys.argv[1] == "--help":
             if self.help:
-                print(self.help)
+                print(f"\n{self.help}\n")
             commands = self.registry.get_all()
             if commands:
-                print("Available commands")
+                print("Available commands:")
                 for name, (_, _, description) in commands.items():
-                    print(f"{name}\t{description}")
+                    print(f"{name}\t{description or ''}")
         else:
             command = sys.argv.pop(1)
             args = sys.argv[1:]
@@ -90,6 +89,4 @@ class Radicli:
         for arg in arg_info:
             func_args, func_kwargs = arg.to_argparse()
             p.add_argument(*func_args, **func_kwargs)
-        if self.version:
-            p.add_argument("--version", action="version", version=self.version)
         return vars(p.parse_args(args))
