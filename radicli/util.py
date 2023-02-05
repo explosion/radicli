@@ -1,5 +1,5 @@
-from typing import Any, Callable, Iterable, Type, Union, Optional, Dict, Tuple, List
-from typing import get_origin, get_args
+from typing import Any, Callable, Iterable, Type, Union, Optional, Dict, Tuple
+from typing import List, Literal, get_origin, get_args
 from dataclasses import dataclass
 from pathlib import Path
 import collections
@@ -35,6 +35,7 @@ class ArgparseArg:
     type: Optional[Union[Type, Callable[[str], Any]]] = None
     default: Any = None
     action: Optional[str] = None
+    choices: Optional[List[str]] = None
     help: Optional[str] = None
 
     def to_argparse(self) -> Tuple[List[str], Dict[str, Any]]:
@@ -53,6 +54,8 @@ class ArgparseArg:
         # Not all arguments are valid for all options
         if self.type is not None:
             kwargs["type"] = self.type
+        if self.choices is not None:
+            kwargs["choices"] = self.choices
         return args, kwargs
 
 
@@ -90,6 +93,10 @@ def get_arg(
     if not origin:
         raise UnsupportedTypeError(param, param_type)
     args = get_args(param_type)
+    if origin == Literal and len(args):
+        arg.choices = list(args)
+        arg.type = type(args[0])
+        return arg
     if origin in (list, collections.abc.Iterable):
         arg.type = find_base_type(args)
         arg.action = "append"

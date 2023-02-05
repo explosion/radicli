@@ -1,4 +1,4 @@
-from typing import List, Iterator, Optional, Dict, Any
+from typing import List, Iterator, Optional, Dict, Any, Literal
 import sys
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -73,6 +73,22 @@ def test_cli_lists():
             assert a == "hello"
             assert b == ["one", "two"]
             assert c is None
+            nonlocal ran
+            ran = True
+
+    assert ran
+
+
+def test_cli_literals():
+    args = ["--a", "pizza", "--b", "fanta"]
+    ran = False
+
+    with cli_context("test", args) as cli:
+
+        @cli.command("test", a=Arg("--a"), b=Arg("--b"))
+        def test(a: Literal["pizza", "pasta"], b: Literal["cola", "fanta"]):
+            assert a == "pizza"
+            assert b == "fanta"
             nonlocal ran
             ran = True
 

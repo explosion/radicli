@@ -1,4 +1,4 @@
-from typing import List, Iterable, Optional, Union
+from typing import List, Iterable, Optional, Union, Literal
 import pytest
 from radicli import Radicli
 from radicli.util import get_arg
@@ -86,6 +86,15 @@ TEST_CASES = [
         ["--a", "hello world"],
         [get_arg("a", lambda x: x.upper(), name="--a", skip_resolve=True)],
         {"a": "HELLO WORLD"},
+    ),
+    # Literals
+    (
+        ["--a", "pizza", "--b", "fanta"],
+        [
+            get_arg("a", Literal["pizza", "pasta", "burger"], name="--a"),
+            get_arg("b", Literal["cola", "fanta", "sprite"], name="--b"),
+        ],
+        {"a": "pizza", "b": "fanta"},
     ),
 ]
 
