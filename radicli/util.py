@@ -2,7 +2,12 @@ from typing import Any, Callable, Iterable, Type, Union, Optional, Dict, Tuple
 from typing import List, Literal, get_origin, get_args
 from dataclasses import dataclass
 from pathlib import Path
-import collections
+
+# We need this Iterable type, which is the type origin of types.Iterable
+try:
+    from collections.abc import Iterable as IterableType  # Python 3.9+
+except ImportError:
+    from collections import Iterable as IterableType  # type: ignore
 
 
 BASE_TYPES = [str, int, float, Path]
@@ -101,7 +106,7 @@ def get_arg(
         arg.choices = list(args)
         arg.type = type(args[0])
         return arg
-    if origin in (list, collections.abc.Iterable):
+    if origin in (list, IterableType):
         arg.type = find_base_type(args)
         arg.action = "append"
         return arg

@@ -19,7 +19,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Install
         run: pip install -r requirements.txt
-      - name: Run mypy
-        run: python -m mypy radicli
+      - name: Run pyright
+        run: python -m pyright radicli
       - name: Run pytest
         run: python -m pytest radicli
