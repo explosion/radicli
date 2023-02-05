@@ -86,7 +86,7 @@ def get_arg(
         return arg
     if param_type == bool:
         arg.type = None
-        arg.default = False
+        arg.default = False  # TODO: should we raise if True specified?
         arg.action = "store_true"
         return arg
     origin = get_origin(param_type)

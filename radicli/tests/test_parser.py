@@ -1,9 +1,10 @@
-from typing import List, Iterable, Optional, Union, Literal
+from typing import List, Iterable, Optional, Union, Literal, Dict
 import pytest
+import argparse
 from radicli import Radicli
-from radicli.util import get_arg
+from radicli.util import get_arg, UnsupportedTypeError
 
-TEST_CASES = [
+GOOD_TEST_CASES = [
     (
         ["--a", "1", "--b", "2", "--c", "2"],
         [
@@ -98,11 +99,60 @@ TEST_CASES = [
     ),
 ]
 
+BAD_TEST_CASES = [
+    # Unsupported types
+    (
+        ["--a", "{'hello': 'world'}"],
+        [(("a", Dict[str, any]), {"name": "--a"})],
+        UnsupportedTypeError,
+    ),
+    # Bad values
+    (
+        ["--a", "hello"],
+        [(("a", int), {"name": "--a"})],
+        SystemExit,
+    ),
+    # Unrecognized, missing or duplicate arguments
+    (["--a", "1", "--b", "2"], [(("a", str), {"name": "--a"})], SystemExit),
+    (["--a", "1"], [(("a", str), {})], SystemExit),
+    (["--b", "1"], [(("a", str), {}), (("b", str), {"name": "--b"})], SystemExit),
+    (
+        ["--a", "1"],
+        [(("a", str), {"name": "--a"}), (("a", str), {"name": "--a"})],
+        argparse.ArgumentError,
+    ),
+    (
+        ["--a", "1", "--b", "2"],
+        [
+            (("a", str), {"name": "--a", "shorthand": "-A"}),
+            (("b", str), {"name": "--b", "shorthand": "-A"}),
+        ],
+        argparse.ArgumentError,
+    ),
+    # Literals
+    (
+        ["--a", "fries"],
+        [(("a", Literal["pizza", "pasta", "burger"]), {"name": "--a"})],
+        SystemExit,
+    ),
+]
+
 
 @pytest.mark.parametrize(
     "args,arg_info,expected",
-    TEST_CASES,
+    GOOD_TEST_CASES,
 )
-def test_options(args, arg_info, expected):
+def test_parser_good(args, arg_info, expected):
     cli = Radicli("test")
     assert cli.parse(args, arg_info) == expected
+
+
+@pytest.mark.parametrize(
+    "args,arg_info_data,expected_error",
+    BAD_TEST_CASES,
+)
+def test_parser_bad(args, arg_info_data, expected_error):
+    cli = Radicli("test")
+    with pytest.raises(expected_error):
+        arg_info = [get_arg(*args, **kwargs) for args, kwargs in arg_info_data]
+        cli.parse(args, arg_info)
