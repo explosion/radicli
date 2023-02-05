@@ -1,12 +1,12 @@
+from typing import Any, Callable, Dict, List, Optional, Type, TypeVar, Union
 import argparse
 import sys
 from dataclasses import dataclass
 from inspect import signature
-from typing import Any, Callable, Dict, List, Optional, Type, TypeVar, Union
-
 import catalogue
 
 from .util import Arg, ArgparseArg, SimpleFrozenDict, get_arg, get_type_name
+
 
 _CallableT = TypeVar("_CallableT", bound=Callable)
 
