@@ -51,7 +51,7 @@ class Radicli:
                     skip_resolve=converter is not None,
                 )
                 cli_args.append(arg)
-            self.registry.register(name, func=(cli_func, cli_args))
+            self.registry.register(name, func=(cli_func, cli_args, cli_func.__doc__))
             return cli_func
 
         return cli_wrapper
@@ -63,14 +63,19 @@ class Radicli:
         """
         import sys
 
-        if len(sys.argv) <= 1:
-            # TODO: handle generic help case, print help, list subcommands
-            ...
+        if len(sys.argv) <= 1:  # TODO: improve this
+            if self.help:
+                print(self.help)
+            commands = self.registry.get_all()
+            if commands:
+                print("Available commands")
+                for name, (_, _, description) in commands.items():
+                    print(f"{name}\t{description}")
         else:
             command = sys.argv.pop(1)
             args = sys.argv[1:]
-            func, arg_info = self.registry.get(command)
-            values = self.parse(args, arg_info, description=func.__doc__)
+            func, arg_info, description = self.registry.get(command)
+            values = self.parse(args, arg_info, description=description)
             func(**values)
 
     def parse(
@@ -78,7 +83,7 @@ class Radicli:
         args: List[str],
         arg_info: List[ArgparseArg],
         *,
-        description: Optional[str] = None
+        description: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Parse a list of arguments. Can also be used for testing."""
         p = argparse.ArgumentParser(description=description)
