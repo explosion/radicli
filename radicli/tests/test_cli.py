@@ -14,7 +14,6 @@ def cli_context(
     cli = Radicli("test", **settings)
     yield cli
     cli.run()
-    sys.argv = []
 
 
 def test_cli_no_annots():
