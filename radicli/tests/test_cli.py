@@ -149,3 +149,37 @@ def test_cli_global_converters():
             ran = True
 
     assert ran
+
+
+def test_cli_with_extra():
+    args = ["--a", "hello", "--b", "1", "--hello", "2", "--world"]
+    ran = False
+
+    with cli_context("test", args) as cli:
+
+        @cli.command_with_extra("test", a=Arg("--a"), b=Arg("--b"))
+        def test(a: str, b: int, _extra: List[str]):
+            assert a == "hello"
+            assert b == 1
+            assert _extra == ["--hello", "2", "--world"]
+            nonlocal ran
+            ran = True
+
+    assert ran
+
+
+def test_cli_with_extra_custom_key():
+    args = ["--a", "hello", "--b", "1", "--hello", "2", "--world"]
+    ran = False
+
+    with cli_context("test", args, {"extra_key": "additional"}) as cli:
+
+        @cli.command_with_extra("test", a=Arg("--a"), b=Arg("--b"))
+        def test(a: str, b: int, additional: List[str]):
+            assert a == "hello"
+            assert b == 1
+            assert additional == ["--hello", "2", "--world"]
+            nonlocal ran
+            ran = True
+
+    assert ran

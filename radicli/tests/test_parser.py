@@ -99,6 +99,18 @@ GOOD_TEST_CASES = [
     ),
 ]
 
+EXTRA_KEY = "__extra__"
+GOOD_WITH_EXTRA_TEST_CASES = [
+    (
+        ["--a", "1", "--b", "2", "--hello", "3", "--world"],
+        [
+            get_arg("a", str, name="--a"),
+            get_arg("b", int, name="--b"),
+        ],
+        {"a": "1", "b": 2, EXTRA_KEY: ["--hello", "3", "--world"]},
+    ),
+]
+
 BAD_TEST_CASES = [
     # Unsupported types
     (
@@ -145,6 +157,15 @@ BAD_TEST_CASES = [
 def test_parser_good(args, arg_info, expected):
     cli = Radicli("test")
     assert cli.parse(args, arg_info) == expected
+
+
+@pytest.mark.parametrize(
+    "args,arg_info,expected",
+    GOOD_WITH_EXTRA_TEST_CASES,
+)
+def test_parser_good_with_extra(args, arg_info, expected):
+    cli = Radicli("test", extra_key=EXTRA_KEY)
+    assert cli.parse(args, arg_info, allow_extra=True) == expected
 
 
 @pytest.mark.parametrize(
