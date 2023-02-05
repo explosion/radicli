@@ -1,4 +1,4 @@
-from typing import List, Iterable, Optional, Union, Literal, Dict
+from typing import List, Iterable, Optional, Union, Literal, Dict, Any
 import pytest
 import argparse
 from radicli import Radicli
@@ -103,7 +103,7 @@ BAD_TEST_CASES = [
     # Unsupported types
     (
         ["--a", "{'hello': 'world'}"],
-        [(("a", Dict[str, any]), {"name": "--a"})],
+        [(("a", Dict[str, Any]), {"name": "--a"})],
         UnsupportedTypeError,
     ),
     # Bad values
