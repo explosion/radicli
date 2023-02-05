@@ -79,6 +79,26 @@ def test_cli_lists():
     assert ran
 
 
+def test_cli_defaults():
+    args = ["yo", "--c", "one"]
+    ran = False
+
+    with cli_context("test", args) as cli:
+
+        @cli.command("test", a=Arg(), b=Arg(), c=Arg("--c"), d=Arg("--d"))
+        def test(
+            a: str, b: str = "hey", *, c: List[str], d: Optional[List[int]] = None
+        ):
+            assert a == "yo"
+            assert b == "hey"
+            assert c == ["one"]
+            assert d is None
+            nonlocal ran
+            ran = True
+
+    assert ran
+
+
 def test_cli_literals():
     args = ["--a", "pizza", "--b", "fanta"]
     ran = False

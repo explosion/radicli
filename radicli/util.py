@@ -33,7 +33,7 @@ class ArgparseArg:
     name: Optional[str] = None
     shorthand: Optional[str] = None
     type: Optional[Union[Type, Callable[[str], Any]]] = None
-    default: Any = None
+    default: Any = ...
     action: Optional[str] = None
     choices: Optional[List[str]] = None
     help: Optional[str] = None
@@ -47,10 +47,14 @@ class ArgparseArg:
             args.append(self.shorthand)
         kwargs = {
             "dest": self.id,
-            "default": self.default,
             "action": self.action,
             "help": self.help,
         }
+        if self.default != ...:
+            kwargs["default"] = self.default
+        # Support defaults for positional arguments
+        if not self.name and self.default != ...:
+            kwargs["nargs"] = "?"
         # Not all arguments are valid for all options
         if self.type is not None:
             kwargs["type"] = self.type
