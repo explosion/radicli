@@ -1,5 +1,5 @@
 from typing import Any, Callable, Iterable, Type, Union, Optional, Dict, Tuple
-from typing import List, Literal, TypeVar, get_origin, get_args
+from typing import List, Literal, TypeVar, get_origin, get_args, TYPE_CHECKING
 from enum import Enum
 from dataclasses import dataclass
 from pathlib import Path
@@ -177,6 +177,18 @@ def format_type(arg_type: Any) -> str:
 
 def join_strings(*strings, char: str = " ") -> str:
     return char.join(x for x in strings if x)
+
+
+def format_table(data: List[Tuple[str, str]]) -> str:
+    widths = [[len(str(col)) for col in item] for item in data]
+    max_widths = [min(max(w), 30) for w in list(zip(*widths))]
+    rows = []
+    for item in data:
+        cols = []
+        for i, col in enumerate(item):
+            cols.append(("{:%d}" % max_widths[i]).format(str(col or "")))
+        rows.append((" " * 3).join(cols))
+    return "\n" + "\n".join(rows) + "\n"
 
 
 def convert_existing_path(path_str: str) -> Path:

@@ -6,7 +6,7 @@ from inspect import signature
 import catalogue
 
 from .parser import ArgumentParser
-from .util import Arg, ArgparseArg, get_arg, join_strings, format_type
+from .util import Arg, ArgparseArg, get_arg, join_strings, format_type, format_table
 from .util import SimpleFrozenDict, CommandNotFoundError
 from .util import DEFAULT_CONVERTERS
 
@@ -160,13 +160,8 @@ class Radicli:
         """
         run_args = args if args is not None else sys.argv
         if len(run_args) <= 1 or run_args[1] == "--help":
-            if self.help:
-                print(f"\n{self.help}\n")
             commands = self.registry.get_all()
-            if commands:
-                print("Available commands:")
-                for name, cmd in commands.items():
-                    print(f"{name}\t{cmd.description or ''}")
+            print(self._format_info(commands, self.subcommands))
         else:
             command = run_args.pop(1)
             args = run_args[1:]
@@ -262,3 +257,21 @@ class Radicli:
             values.pop(self.extra_key, None)
             return values
         return values
+
+    def _format_info(
+        self,
+        commands: Dict[str, Command],
+        subcommands: Dict[str, catalogue.Registry],
+        max_width: int = 70,
+    ) -> str:
+        """Nicely format the available command overview and add subcommands."""
+        data = []
+        for name, cmd in commands.items():
+            desc = (cmd.description or "").strip()
+            desc = desc if len(desc) <= max_width else f"{desc[:max_width - 3]}..."
+            data.append((name, desc))
+            if name in subcommands:
+                col = f"Subcommands: {', '.join(subcommands[name].get_all())}"
+                data.append(("", col))
+        info = [self.help, "Available commands:", format_table(data)]
+        return join_strings(*info, char="\n")
