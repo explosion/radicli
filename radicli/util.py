@@ -165,10 +165,14 @@ def find_base_type(
 
 def format_type(arg_type: Any) -> str:
     """Get a pretty-printed string for a type."""
+    # Nicer formatting for our own TypeVars
+    if isinstance(arg_type, TypeVar) and arg_type.__bound__:
+        return f"{arg_type.__name__} ({format_type(arg_type.__bound__)})"
     if hasattr(arg_type, "__name__"):
         return arg_type.__name__
     type_str = str(arg_type)
-    return type_str.rsplit(".", 1)[-1]
+    # Strip out typing for built-in types, leave path for custom
+    return type_str.replace("typing.", "")
 
 
 def join_strings(*strings, char: str = " ") -> str:
