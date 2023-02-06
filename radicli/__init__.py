@@ -104,12 +104,13 @@ class Radicli:
 
         return cli_wrapper
 
-    def run(self) -> None:
+    def run(self, args: Optional[List[str]] = None) -> None:
         """
         Run the CLI. Should typically be used in the __main__.py nested under a
         `if __name__ == "__main__":` block.
         """
-        if len(sys.argv) <= 1 or sys.argv[1] == "--help":
+        run_args = args if args is not None else sys.argv
+        if len(run_args) <= 1 or run_args[1] == "--help":
             if self.help:
                 print(f"\n{self.help}\n")
             commands = self.registry.get_all()
@@ -118,8 +119,8 @@ class Radicli:
                 for name, cmd in commands.items():
                     print(f"{name}\t{cmd.description or ''}")
         else:
-            command = sys.argv.pop(1)
-            args = sys.argv[1:]
+            command = run_args.pop(1)
+            args = run_args[1:]
             cmd = self.registry.get(command)
             values = self.parse(
                 args, cmd.args, description=cmd.description, allow_extra=cmd.allow_extra
