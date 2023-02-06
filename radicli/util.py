@@ -20,6 +20,22 @@ class UnsupportedTypeError(Exception):
         self.message = f"Unsupported type for '{self.arg}': {self.annot}"
 
 
+class CommandNotFoundError(Exception):
+    def __init__(self, name: str, options: List[str]):
+        self.name = name
+        self.options = options
+        self.message = (
+            f"Can't find command '{self.name}'. Available: {', '.join(self.options)}"
+        )
+
+
+class InvalidArgumentError(Exception):
+    def __init__(self, arg_id: str, message: str):
+        self.id = arg_id
+        self.msg = message
+        self.message = f"Invalid argument '{self.id}': {self.msg}"
+
+
 @dataclass
 class Arg:
     """Field for defining the CLI argument in the decorator."""
@@ -94,8 +110,13 @@ def get_arg(
         arg.type = param_type
         return arg
     if param_type == bool:
+        if not name:
+            msg = f"boolean arguments need to be flags, e.g. --{arg.id}"
+            raise InvalidArgumentError(arg.id, msg)
         arg.type = None
-        arg.default = False  # TODO: should we raise if True specified?
+        if default is True:
+            raise InvalidArgumentError(arg.id, "boolean flags need to default to False")
+        arg.default = False
         arg.action = "store_true"
         return arg
     origin = get_origin(param_type)
