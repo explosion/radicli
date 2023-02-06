@@ -64,7 +64,12 @@ class Radicli:
             sig_types = {}
             sig_defaults = {}
             for param_name, param_value in sig.parameters.items():
-                sig_types[param_name] = param_value.annotation
+                annot = param_value.annotation
+                if param_name == self.extra_key:
+                    annot = List[str]  # set automatically since we know it
+                elif annot == param_value.empty:
+                    annot = str  # default to string for unset types
+                sig_types[param_name] = annot
                 sig_defaults[param_name] = (
                     param_value.default
                     if param_value.default != param_value.empty
