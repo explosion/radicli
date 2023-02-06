@@ -18,6 +18,7 @@ class UnsupportedTypeError(Exception):
         self.arg = arg
         self.annot = annot
         self.message = f"Unsupported type for '{self.arg}': {self.annot}"
+        super().__init__(self.message)
 
 
 class CommandNotFoundError(Exception):
@@ -27,6 +28,7 @@ class CommandNotFoundError(Exception):
         self.message = (
             f"Can't find command '{self.name}'. Available: {', '.join(self.options)}"
         )
+        super().__init__(self.message)
 
 
 class InvalidArgumentError(Exception):
@@ -34,6 +36,7 @@ class InvalidArgumentError(Exception):
         self.id = arg_id
         self.msg = message
         self.message = f"Invalid argument '{self.id}': {self.msg}"
+        super().__init__(self.message)
 
 
 @dataclass
@@ -154,6 +157,10 @@ def get_type_name(arg_type: Any) -> str:
         return arg_type.__name__
     type_str = str(arg_type)
     return type_str.rsplit(".", 1)[-1]
+
+
+def get_prog_name(*path) -> str:
+    return " ".join(p for p in path if p)
 
 
 class SimpleFrozenDict(dict):
