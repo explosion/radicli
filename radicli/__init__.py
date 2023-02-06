@@ -144,7 +144,7 @@ class Radicli:
                 )
                 has_converter = converter is not None or arg.has_converter
                 display_type = param_type if has_converter else arg_type
-                arg.help = join_strings(format_type(display_type), arg.help, char=" - ")
+                arg.help = join_strings(arg.help, f"({format_type(display_type)})")
                 cli_args.append(arg)
             cmd = Command(
                 name=name,
