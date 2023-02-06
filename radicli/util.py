@@ -156,6 +156,10 @@ def get_type_name(arg_type: Any) -> str:
     return type_str.rsplit(".", 1)[-1]
 
 
+def get_prog_name(*path) -> str:
+    return " ".join(p for p in path if p)
+
+
 class SimpleFrozenDict(dict):
     """Simplified implementation of a frozen dict, mainly used as default
     function or method argument (for arguments that should default to empty
