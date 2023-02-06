@@ -5,16 +5,17 @@ from dataclasses import dataclass
 from inspect import signature
 import catalogue
 
-from .util import Arg, ArgparseArg, get_arg, get_type_name, get_prog_name
-from .util import SimpleFrozenDict, CommandNotFoundError, CliParserError
+from .parser import ArgumentParser
+from .util import Arg, ArgparseArg, get_arg, join_strings, format_type
+from .util import SimpleFrozenDict, CommandNotFoundError
+from .util import DEFAULT_CONVERTERS
+
+# Make available for import
+from .util import ExistingPath, ExistingFilePath, ExistingDirPath  # noqa: F401
+from .util import ExistingFilePathOrDash  # noqa: F401
 
 
 _CallableT = TypeVar("_CallableT", bound=Callable)
-
-
-class ArgumentParser(argparse.ArgumentParser):
-    def error(self, message: str) -> None:
-        raise CliParserError(message)
 
 
 @dataclass
@@ -48,7 +49,8 @@ class Radicli:
         self.name = name
         self.prog = prog
         self.help = help
-        self.converters = converters
+        self.converters = dict(DEFAULT_CONVERTERS)  # make sure to copy
+        self.converters.update(converters)
         self.extra_key = extra_key
         self.registry = catalogue.create(self.name, "commands")
         self.subcommands = {}
@@ -123,8 +125,9 @@ class Radicli:
                     args[param_name] = Arg()
             cli_args = []
             for param, arg in args.items():
-                converter = self.converters.get(sig_types[param], arg.converter)
-                arg_type = converter or sig_types[param]
+                param_type = sig_types[param]
+                converter = self.converters.get(param_type, arg.converter)
+                arg_type = converter or param_type
                 arg = get_arg(
                     param,
                     arg_type,
@@ -134,7 +137,8 @@ class Radicli:
                     default=sig_defaults[param],
                     skip_resolve=converter is not None,
                 )
-                arg.help = f"{get_type_name(arg_type)} - {arg.help or ''}"
+                display_type = param_type if converter else arg_type
+                arg.help = join_strings(format_type(display_type), arg.help, char=" - ")
                 cli_args.append(arg)
             cmd = Command(
                 name=name,
@@ -200,7 +204,7 @@ class Radicli:
     ) -> Dict[str, Any]:
         """Parse a list of arguments. Can also be used for testing."""
         p = ArgumentParser(
-            prog=get_prog_name(self.prog, name),
+            prog=join_strings(self.prog, name),
             description=description,
             formatter_class=argparse.ArgumentDefaultsHelpFormatter,
         )
@@ -222,7 +226,7 @@ class Radicli:
                     sub_cmd.name,
                     description=sub_cmd.description,
                     help=sub_cmd.description,
-                    prog=get_prog_name(self.prog, sub_cmd.parent, sub_name),
+                    prog=join_strings(self.prog, sub_cmd.parent, sub_name),
                 )
                 subparsers[sub_cmd.name] = (subp, sub_cmd)
                 for sub_arg in sub_cmd.args:

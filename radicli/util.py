@@ -1,5 +1,5 @@
 from typing import Any, Callable, Iterable, Type, Union, Optional, Dict, Tuple
-from typing import List, Literal, get_origin, get_args
+from typing import List, Literal, TypeVar, get_origin, get_args
 from enum import Enum
 from dataclasses import dataclass
 from pathlib import Path
@@ -163,16 +163,63 @@ def find_base_type(
     return default_type
 
 
-def get_type_name(arg_type: Any) -> str:
+def format_type(arg_type: Any) -> str:
     """Get a pretty-printed string for a type."""
+    # Nicer formatting for our own TypeVars
+    if isinstance(arg_type, TypeVar) and arg_type.__bound__:
+        return f"{arg_type.__name__} ({format_type(arg_type.__bound__)})"
     if hasattr(arg_type, "__name__"):
         return arg_type.__name__
     type_str = str(arg_type)
-    return type_str.rsplit(".", 1)[-1]
+    # Strip out typing for built-in types, leave path for custom
+    return type_str.replace("typing.", "")
 
 
-def get_prog_name(*path) -> str:
-    return " ".join(p for p in path if p)
+def join_strings(*strings, char: str = " ") -> str:
+    return char.join(x for x in strings if x)
+
+
+def convert_existing_path(path_str: str) -> Path:
+    path = Path(path_str)
+    if not path.exists():
+        raise CliParserError(f"path does not exist: {path_str}")
+    return path
+
+
+def convert_existing_file_path(path_str: str) -> Path:
+    path = convert_existing_path(path_str)
+    if not path.is_file():
+        raise CliParserError(f"path is not a file path: {path_str}")
+    return path
+
+
+def convert_existing_dir_path(path_str: str) -> Path:
+    path = convert_existing_path(path_str)
+    if not path.is_dir():
+        raise CliParserError(f"path is not a directory path: {path_str}")
+    return path
+
+
+def convert_existing_file_path_or_dash(path_str: str) -> Union[Path, str]:
+    if path_str == "-":
+        return path_str
+    return convert_existing_file_path(path_str)
+
+
+# Custom path types for custom converters
+ExistingPath = TypeVar("ExistingPath", bound=Path)
+ExistingFilePath = TypeVar("ExistingFilePath", bound=Path)
+ExistingDirPath = TypeVar("ExistingDirPath", bound=Path)
+ExistingFilePathOrDash = TypeVar(
+    "ExistingFilePathOrDash", bound=Union[Path, Literal["-"]]
+)
+
+DEFAULT_CONVERTERS: Dict[Union[Type, str], Callable[[str], Any]] = {
+    ExistingPath: convert_existing_path,
+    ExistingFilePath: convert_existing_file_path,
+    ExistingDirPath: convert_existing_dir_path,
+    ExistingFilePathOrDash: convert_existing_file_path_or_dash,
+}
 
 
 class SimpleFrozenDict(dict):

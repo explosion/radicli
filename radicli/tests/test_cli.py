@@ -1,11 +1,16 @@
 from typing import List, Iterator, Optional, Dict, Any, Literal
 from enum import Enum
+from dataclasses import dataclass
 import pytest
 import sys
 from contextlib import contextmanager
-from dataclasses import dataclass
+import tempfile
+import shutil
+from pathlib import Path
 from radicli import Radicli, Arg
 from radicli.util import SimpleFrozenDict, CommandNotFoundError, CliParserError
+from radicli.util import ExistingPath, ExistingFilePath, ExistingDirPath
+from radicli.util import ExistingFilePathOrDash
 
 
 @contextmanager
@@ -16,6 +21,14 @@ def cli_context(
     cli = Radicli("test", **settings)
     yield cli
     cli.run()
+
+
+@contextmanager
+def make_tempdir() -> Iterator[Path]:
+    """Run a block in a temp directory and remove it afterwards."""
+    d = Path(tempfile.mkdtemp())
+    yield d
+    shutil.rmtree(str(d))
 
 
 def test_cli_no_annots():
@@ -158,6 +171,25 @@ def test_cli_converter():
             ran = True
 
     assert ran
+
+
+def test_cli_invalid_converter():
+    """Test that errors in converters aren't masked by argparse."""
+    # Previously: argument --a: invalid converter value: 'hello'
+    error_msg = "This is an error!"
+
+    def converter(value):
+        raise TypeError(error_msg)
+
+    cli = Radicli("test")
+
+    @cli.command("test", a=Arg("--a", converter=converter))
+    def test(a: str):
+        ...
+
+    sys.argv = ["", "test", "--a", "hello"]
+    with pytest.raises(CliParserError, match=error_msg):
+        cli.run()
 
 
 def test_cli_global_converters():
@@ -387,3 +419,88 @@ def test_cli_subcommands_no_parent():
     sys.argv = ["", "parent", "child2", *args_child2]
     cli.run()
     assert ran_child2
+
+
+def test_cli_path_converters():
+    dir_name = "my_dir"
+    file_name = "my_file.txt"
+    ran = False
+
+    cli = Radicli("test")
+
+    @cli.command("test", a=Arg("--a"), b=Arg("--b"), c=Arg("--c"))
+    def test(a: ExistingPath, b: ExistingFilePath, c: ExistingDirPath):
+        assert str(a) == str(file_path)
+        assert str(b) == str(file_path)
+        assert str(c) == str(dir_path)
+        nonlocal ran
+        ran = True
+
+    with make_tempdir() as d:
+        dir_path = d / dir_name
+        dir_path.mkdir()
+        file_path = d / file_name
+        file_path.touch()
+        bad_path = Path(d / "x.txt")
+
+        args1 = ["--a", str(file_path), "--b", str(file_path), "--c", str(dir_path)]
+        args2 = ["--a", str(bad_path), "--b", str(file_path), "--c", str(dir_path)]
+        args3 = ["--a", str(file_path), "--b", str(dir_path), "--c", str(dir_path)]
+        args4 = ["--a", str(file_path), "--b", str(file_path), "--c", str(file_path)]
+
+        sys.argv = ["", "test", *args1]
+        cli.run()
+        assert ran
+
+        sys.argv = ["", "test", *args2]
+        with pytest.raises(CliParserError):
+            cli.run()
+
+        sys.argv = ["", "test", *args3]
+        with pytest.raises(CliParserError):
+            cli.run()
+
+        sys.argv = ["", "test", *args4]
+        with pytest.raises(CliParserError):
+            cli.run()
+
+
+def test_cli_path_or_dash():
+    file_name = "my_file.txt"
+    ran1 = False
+    ran2 = False
+
+    cli = Radicli("test")
+
+    @cli.command("test1", a=Arg())
+    def test1(a: ExistingFilePathOrDash):
+        assert str(a) == str(file_path)
+        nonlocal ran1
+        ran1 = True
+
+    @cli.command("test2", a=Arg())
+    def test2(a: ExistingFilePathOrDash):
+        assert a == "-"
+        nonlocal ran2
+        ran2 = True
+
+    with make_tempdir() as d:
+        file_path = d / file_name
+        file_path.touch()
+        bad_path = Path(d / "x.txt")
+
+        sys.argv = ["", "test1", str(file_path)]
+        cli.run()
+        assert ran1
+
+        sys.argv = ["", "test2", "-"]
+        cli.run()
+        assert ran2
+
+        sys.argv = ["", "test1", str(bad_path)]
+        with pytest.raises(CliParserError):
+            cli.run()
+
+        sys.argv = ["", "test2", "_"]
+        with pytest.raises(CliParserError):
+            cli.run()
