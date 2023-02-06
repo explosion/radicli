@@ -3,7 +3,7 @@ from enum import Enum
 import pytest
 import argparse
 from radicli import Radicli
-from radicli.util import get_arg, UnsupportedTypeError
+from radicli.util import get_arg, UnsupportedTypeError, CliParserError
 
 
 class FoodEnum(Enum):
@@ -136,12 +136,12 @@ BAD_TEST_CASES = [
     (
         ["--a", "hello"],
         [(("a", int), {"name": "--a"})],
-        SystemExit,
+        CliParserError,
     ),
     # Unrecognized, missing or duplicate arguments
-    (["--a", "1", "--b", "2"], [(("a", str), {"name": "--a"})], SystemExit),
-    (["--a", "1"], [(("a", str), {})], SystemExit),
-    (["--b", "1"], [(("a", str), {}), (("b", str), {"name": "--b"})], SystemExit),
+    (["--a", "1", "--b", "2"], [(("a", str), {"name": "--a"})], CliParserError),
+    (["--a", "1"], [(("a", str), {})], CliParserError),
+    (["--b", "1"], [(("a", str), {}), (("b", str), {"name": "--b"})], CliParserError),
     (
         ["--a", "1"],
         [(("a", str), {"name": "--a"}), (("a", str), {"name": "--a"})],
@@ -159,10 +159,10 @@ BAD_TEST_CASES = [
     (
         ["--a", "fries"],
         [(("a", Literal["pizza", "pasta", "burger"]), {"name": "--a"})],
-        SystemExit,
+        CliParserError,
     ),
     # Enums
-    (["--a", "fries"], [(("a", FoodEnum), {"name": "--a"})], SystemExit),
+    (["--a", "fries"], [(("a", FoodEnum), {"name": "--a"})], CliParserError),
 ]
 
 

@@ -5,7 +5,7 @@ import sys
 from contextlib import contextmanager
 from dataclasses import dataclass
 from radicli import Radicli, Arg
-from radicli.util import SimpleFrozenDict, CommandNotFoundError
+from radicli.util import SimpleFrozenDict, CommandNotFoundError, CliParserError
 
 
 @contextmanager
@@ -282,11 +282,11 @@ def test_cli_subcommands():
         cli.run()
 
     sys.argv = ["", "parent", "child3"]
-    with pytest.raises(SystemExit):
+    with pytest.raises(CliParserError):
         cli.run()
 
     sys.argv = ["", "parent", "child2", *args_child1]
-    with pytest.raises(SystemExit):
+    with pytest.raises(CliParserError):
         cli.run()
 
 

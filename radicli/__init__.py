@@ -6,10 +6,15 @@ from inspect import signature
 import catalogue
 
 from .util import Arg, ArgparseArg, get_arg, get_type_name, get_prog_name
-from .util import SimpleFrozenDict, CommandNotFoundError
+from .util import SimpleFrozenDict, CommandNotFoundError, CliParserError
 
 
 _CallableT = TypeVar("_CallableT", bound=Callable)
+
+
+class ArgumentParser(argparse.ArgumentParser):
+    def error(self, message: str) -> None:
+        raise CliParserError(message)
 
 
 @dataclass
@@ -194,7 +199,7 @@ class Radicli:
         allow_extra: bool = False,
     ) -> Dict[str, Any]:
         """Parse a list of arguments. Can also be used for testing."""
-        p = argparse.ArgumentParser(
+        p = ArgumentParser(
             prog=get_prog_name(self.prog, name),
             description=description,
             formatter_class=argparse.ArgumentDefaultsHelpFormatter,
@@ -204,10 +209,14 @@ class Radicli:
                 continue
             func_args, func_kwargs = arg.to_argparse()
             p.add_argument(*func_args, **func_kwargs)
-        subparsers: Dict[str, Tuple[argparse.ArgumentParser, Command]] = {}
+        subparsers: Dict[str, Tuple[ArgumentParser, Command]] = {}
         if subcommands:
             # We're using the dest to determine whether subcommand was called
-            sp = p.add_subparsers(title="Subcommands", dest=self._subcommand_key)
+            sp = p.add_subparsers(
+                title="Subcommands",
+                dest=self._subcommand_key,
+                parser_class=ArgumentParser,
+            )
             for sub_name, sub_cmd in subcommands.items():
                 subp = sp.add_parser(
                     sub_cmd.name,
@@ -236,7 +245,7 @@ class Radicli:
         return {**sub_values, self._subcommand_key: sub_key}
 
     def _handle_extra(
-        self, parser: argparse.ArgumentParser, values: Dict[str, Any], allow_extra: bool
+        self, parser: ArgumentParser, values: Dict[str, Any], allow_extra: bool
     ) -> Dict[str, Any]:
         """
         Handle extra arguments and raise error if needed. We're doing this

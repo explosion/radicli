@@ -15,8 +15,14 @@ except ImportError:
 BASE_TYPES = [str, int, float, Path]
 
 
+class CliParserError(SystemExit):
+    def __init__(self, message: str) -> None:
+        self.message = message
+        super().__init__(self.message)
+
+
 class UnsupportedTypeError(Exception):
-    def __init__(self, arg: str, annot: Any):
+    def __init__(self, arg: str, annot: Any) -> None:
         self.arg = arg
         self.annot = annot
         self.message = f"Unsupported type for '{self.arg}': {self.annot}"
@@ -24,7 +30,7 @@ class UnsupportedTypeError(Exception):
 
 
 class CommandNotFoundError(Exception):
-    def __init__(self, name: str, options: List[str]):
+    def __init__(self, name: str, options: List[str]) -> None:
         self.name = name
         self.options = options
         self.message = (
