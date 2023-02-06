@@ -18,6 +18,7 @@ class UnsupportedTypeError(Exception):
         self.arg = arg
         self.annot = annot
         self.message = f"Unsupported type for '{self.arg}': {self.annot}"
+        super().__init__(self.message)
 
 
 class CommandNotFoundError(Exception):
@@ -27,6 +28,7 @@ class CommandNotFoundError(Exception):
         self.message = (
             f"Can't find command '{self.name}'. Available: {', '.join(self.options)}"
         )
+        super().__init__(self.message)
 
 
 class InvalidArgumentError(Exception):
@@ -34,6 +36,7 @@ class InvalidArgumentError(Exception):
         self.id = arg_id
         self.msg = message
         self.message = f"Invalid argument '{self.id}': {self.msg}"
+        super().__init__(self.message)
 
 
 @dataclass

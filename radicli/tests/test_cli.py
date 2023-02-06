@@ -328,3 +328,35 @@ def test_cli_subcommands_child_extra():
     sys.argv = ["", "parent", "child", *args_child]
     cli.run()
     assert ran_child
+
+
+def test_cli_subcommands_no_parent():
+    args_child1 = ["--a", "hey", "--b", "2", "--c"]
+    args_child2 = ["yo", "--y", "pasta"]
+    ran_child1 = False
+    ran_child2 = False
+
+    cli = Radicli("test")
+
+    @cli.subcommand("parent", "child1", a=Arg("--a"), b=Arg("--b"), c=Arg("--c"))
+    def child1(a: str, b: int, c: bool):
+        assert a == "hey"
+        assert b == 2
+        assert c
+        nonlocal ran_child1
+        ran_child1 = True
+
+    @cli.subcommand("parent", "child2", x=Arg(), y=Arg("--y"))
+    def child2(x: str, y: Literal["pizza", "pasta"]):
+        assert x == "yo"
+        assert y == "pasta"
+        nonlocal ran_child2
+        ran_child2 = True
+
+    sys.argv = ["", "parent", "child1", *args_child1]
+    cli.run()
+    assert ran_child1
+
+    sys.argv = ["", "parent", "child2", *args_child2]
+    cli.run()
+    assert ran_child2

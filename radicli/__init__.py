@@ -17,15 +17,19 @@ class Command:
     name: str
     func: Callable
     args: List[ArgparseArg]
-    description: Optional[str]
+    description: Optional[str] = None
     allow_extra: bool = False
     parent: Optional[str] = None
 
 
 class Radicli:
     name: str
+    prog: Optional[str]
     help: Optional[str]
     converters: Dict[Union[Type, str], Callable[[str], Any]]
+    extra_key: str
+    subcommands: Dict[str, catalogue.Registry]
+    _subcommand_key: str
 
     def __init__(
         self,
@@ -42,7 +46,7 @@ class Radicli:
         self.converters = converters
         self.extra_key = extra_key
         self.registry = catalogue.create(self.name, "commands")
-        self.subcommands: Dict[str, catalogue.Registry] = {}
+        self.subcommands = {}
         self._subcommand_key = "subcommand"
 
     def command(self, name: str, **args) -> Callable[[_CallableT], _CallableT]:
@@ -157,12 +161,16 @@ class Radicli:
         else:
             command = run_args.pop(1)
             args = run_args[1:]
-            if command not in self.registry:
-                raise CommandNotFoundError(command, list(self.registry.get_all()))
-            cmd = self.registry.get(command)
             subcommands = {}
             if command in self.subcommands:
                 subcommands = self.subcommands[command].get_all()
+            if command not in self.registry:
+                if not subcommands:
+                    raise CommandNotFoundError(command, list(self.registry.get_all()))
+                # Add a dummy parent to support subcommands without parents
+                dummy = Command(name=command, func=lambda x: None, args=[])
+                self.registry.register(command, func=dummy)
+            cmd = self.registry.get(command)
             values = self.parse(
                 args,
                 cmd.args,
