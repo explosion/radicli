@@ -197,7 +197,7 @@ def join_strings(*strings, char: str = " ") -> str:
 
 def format_table(data: List[Tuple[str, str]]) -> str:
     widths = [[len(str(col)) for col in item] for item in data]
-    max_widths = [min(max(w), 30) for w in list(zip(*widths))]
+    max_widths = [min(max(w), 50) for w in list(zip(*widths))]
     rows = []
     for item in data:
         cols = []

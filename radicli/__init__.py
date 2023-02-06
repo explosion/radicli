@@ -273,11 +273,15 @@ class Radicli:
         """Nicely format the available command overview and add subcommands."""
         data = []
         for name, cmd in commands.items():
-            desc = (cmd.description or "").strip()
-            desc = desc if len(desc) <= max_width else f"{desc[:max_width - 3]}..."
-            data.append((name, desc))
+            d = (cmd.description or "").strip()[:max_width]
+            d = d.rsplit("." if "." in d else " ", 1)[0] + ("." if "." in d else "...")
+            data.append((f"  {name}", d))
             if name in subcommands:
                 col = f"Subcommands: {', '.join(subcommands[name].get_all())}"
                 data.append(("", col))
+        for name in subcommands:
+            if name not in commands:
+                col = f"Subcommands: {', '.join(subcommands[name].get_all())}"
+                data.append((f"  {name}", col))
         info = [self.help, "Available commands:", format_table(data)]
         return join_strings(*info, char="\n")
