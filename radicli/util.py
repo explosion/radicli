@@ -1,7 +1,9 @@
 from typing import Any, Callable, Iterable, Type, Union, Optional, Dict, Tuple
 from typing import List, Literal, get_origin, get_args
+from enum import Enum
 from dataclasses import dataclass
 from pathlib import Path
+import inspect
 
 # We need this Iterable type, which is the type origin of types.Iterable
 try:
@@ -121,6 +123,10 @@ def get_arg(
             raise InvalidArgumentError(arg.id, "boolean flags need to default to False")
         arg.default = False
         arg.action = "store_true"
+        return arg
+    if inspect.isclass(param_type) and issubclass(param_type, Enum):
+        arg.choices = list(param_type.__members__.values())
+        arg.type = lambda value: param_type.__members__.get(value, value)
         return arg
     origin = get_origin(param_type)
     if not origin:

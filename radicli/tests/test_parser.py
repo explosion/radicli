@@ -1,8 +1,16 @@
 from typing import List, Iterable, Optional, Union, Literal, Dict, Any
+from enum import Enum
 import pytest
 import argparse
 from radicli import Radicli
 from radicli.util import get_arg, UnsupportedTypeError
+
+
+class FoodEnum(Enum):
+    pizza = "🍕"
+    pasta = "🍝"
+    burger = "🍔"
+
 
 GOOD_TEST_CASES = [
     (
@@ -97,6 +105,12 @@ GOOD_TEST_CASES = [
         ],
         {"a": "pizza", "b": "fanta"},
     ),
+    # Enums
+    (
+        ["--a", "pizza"],
+        [get_arg("a", FoodEnum, name="--a")],
+        {"a": FoodEnum.pizza},
+    ),
 ]
 
 EXTRA_KEY = "__extra__"
@@ -147,6 +161,8 @@ BAD_TEST_CASES = [
         [(("a", Literal["pizza", "pasta", "burger"]), {"name": "--a"})],
         SystemExit,
     ),
+    # Enums
+    (["--a", "fries"], [(("a", FoodEnum), {"name": "--a"})], SystemExit),
 ]
 
 

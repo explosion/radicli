@@ -1,4 +1,5 @@
 from typing import List, Iterator, Optional, Dict, Any, Literal
+from enum import Enum
 import pytest
 import sys
 from contextlib import contextmanager
@@ -110,6 +111,32 @@ def test_cli_literals():
         def test(a: Literal["pizza", "pasta"], b: Literal["cola", "fanta"]):
             assert a == "pizza"
             assert b == "fanta"
+            nonlocal ran
+            ran = True
+
+    assert ran
+
+
+def test_cli_enums():
+    args = ["--a", "burger", "--b", "beer"]
+    ran = False
+
+    class FoodEnum(Enum):
+        pizza = "🍕"
+        pasta = "🍝"
+        burger = "🍔"
+
+    class DrinkEnum(Enum):
+        soda = "🥤"
+        juice = "🧃"
+        beer = "🍺"
+
+    with cli_context("test", args) as cli:
+
+        @cli.command("test", a=Arg("--a"), b=Arg("--b"))
+        def test(a: FoodEnum, b: DrinkEnum):
+            assert a == FoodEnum.burger
+            assert b == DrinkEnum.beer
             nonlocal ran
             ran = True
 
