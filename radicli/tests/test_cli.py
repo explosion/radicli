@@ -94,6 +94,22 @@ def test_cli_lists():
     assert ran
 
 
+def test_cli_different_dest():
+    args = ["--a", "one", "--b", "two"]
+    ran = False
+
+    with cli_context("test", args) as cli:
+
+        @cli.command("test", first=Arg("--a"), second=Arg("--b"))
+        def test(first: str, second: str):
+            assert first == "one"
+            assert second == "two"
+            nonlocal ran
+            ran = True
+
+    assert ran
+
+
 def test_cli_defaults():
     args = ["yo", "--c", "one"]
     ran = False

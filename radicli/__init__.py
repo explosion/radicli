@@ -32,7 +32,7 @@ class Radicli:
     name: str
     prog: Optional[str]
     help: Optional[str]
-    converters: Dict[Union[Type, str], Callable[[str], Any]]
+    converters: Dict[Union[Type, str], Callable[[Type], Any]]
     extra_key: str
     subcommands: Dict[str, catalogue.Registry]
     _subcommand_key: str
@@ -42,7 +42,7 @@ class Radicli:
         name: str,
         prog: Optional[str] = None,
         help: Optional[str] = None,
-        converters: Dict[Union[Type, str], Callable[[str], Any]] = SimpleFrozenDict(),
+        converters: Dict[Union[Type, str], Callable[[Type], Any]] = SimpleFrozenDict(),
         extra_key: str = "_extra",
     ) -> None:
         """Initialize the CLI and create the registry."""
@@ -124,20 +124,26 @@ class Radicli:
                 if param_name not in args:  # support args not in decorator
                     args[param_name] = Arg()
             cli_args = []
-            for param, arg in args.items():
+            for param, arg_info in args.items():
                 param_type = sig_types[param]
-                converter = self.converters.get(param_type, arg.converter)
+
+                def get_converter(arg_type: Type) -> Optional[Callable]:
+                    return self.converters.get(arg_type, arg_info.converter)
+
+                converter = get_converter(param_type)
                 arg_type = converter or param_type
                 arg = get_arg(
                     param,
                     arg_type,
-                    name=arg.option,
-                    shorthand=arg.short,
-                    help=arg.help,
+                    name=arg_info.option,
+                    shorthand=arg_info.short,
+                    help=arg_info.help,
                     default=sig_defaults[param],
                     skip_resolve=converter is not None,
+                    get_converter=get_converter,
                 )
-                display_type = param_type if converter else arg_type
+                has_converter = converter is not None or arg.has_converter
+                display_type = param_type if has_converter else arg_type
                 arg.help = join_strings(format_type(display_type), arg.help, char=" - ")
                 cli_args.append(arg)
             cmd = Command(

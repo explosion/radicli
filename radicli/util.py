@@ -1,5 +1,5 @@
 from typing import Any, Callable, Iterable, Type, Union, Optional, Dict, Tuple
-from typing import List, Literal, TypeVar, get_origin, get_args, TYPE_CHECKING
+from typing import List, Literal, TypeVar, get_origin, get_args
 from enum import Enum
 from dataclasses import dataclass
 from pathlib import Path
@@ -69,6 +69,7 @@ class ArgparseArg:
     action: Optional[str] = None
     choices: Optional[Union[List[str], List[Enum]]] = None
     help: Optional[str] = None
+    has_converter: bool = False
 
     def to_argparse(self) -> Tuple[List[str], Dict[str, Any]]:
         """Helper method to generate args and kwargs for Parser.add_argument."""
@@ -103,6 +104,7 @@ def get_arg(
     shorthand: Optional[str] = None,
     help: Optional[str] = None,
     default: Optional[Any] = ...,
+    get_converter: Optional[Callable[[Type], Optional[Callable[[Type], Any]]]] = None,
     skip_resolve: bool = False,
 ) -> ArgparseArg:
     """Generate an argument to add to argparse and interpret types if possible."""
@@ -115,8 +117,28 @@ def get_arg(
     )
     if default != ...:
         arg.default = default
+    converter = get_converter(param_type) if get_converter else None
+    if converter:
+        arg.type = converter
+        arg.has_converter = True
+        return arg
     if skip_resolve:
         return arg
+    # Need to do this first so we can recursively resolve custom types like
+    # Union[ExistingPath] etc.
+    origin = get_origin(param_type)
+    args = get_args(param_type)
+    if origin == Union:
+        arg_types = [a for a in args if a != type(None)]  # noqa: E721
+        if arg_types:
+            return get_arg(
+                param,
+                arg_types[0],
+                name=name,
+                help=help,
+                default=default,
+                get_converter=get_converter,
+            )
     if param_type in BASE_TYPES:
         arg.type = param_type
         return arg
@@ -134,10 +156,8 @@ def get_arg(
         arg.choices = list(param_type.__members__.values())
         arg.type = lambda value: param_type.__members__.get(value, value)
         return arg
-    origin = get_origin(param_type)
     if not origin:
         raise UnsupportedTypeError(param, param_type)
-    args = get_args(param_type)
     if origin == Literal and len(args):
         arg.choices = list(args)
         arg.type = type(args[0])
@@ -146,10 +166,6 @@ def get_arg(
         arg.type = find_base_type(args)
         arg.action = "append"
         return arg
-    if origin == Union:
-        arg_types = [a for a in args if a != type(None)]  # noqa: E721
-        if arg_types:
-            return get_arg(param, arg_types[0], name=name, help=help, default=default)
     raise UnsupportedTypeError(param, param_type)
 
 
