@@ -163,7 +163,7 @@ def find_base_type(
     return default_type
 
 
-def get_type_name(arg_type: Any) -> str:
+def format_type(arg_type: Any) -> str:
     """Get a pretty-printed string for a type."""
     if hasattr(arg_type, "__name__"):
         return arg_type.__name__
@@ -171,8 +171,8 @@ def get_type_name(arg_type: Any) -> str:
     return type_str.rsplit(".", 1)[-1]
 
 
-def get_prog_name(*path) -> str:
-    return " ".join(p for p in path if p)
+def join_strings(*strings, char: str = " ") -> str:
+    return char.join(x for x in strings if x)
 
 
 def convert_existing_path(path_str: str) -> Path:
