@@ -196,15 +196,25 @@ def convert_existing_dir_path(path_str: str) -> Path:
     return path
 
 
+def convert_existing_file_path_or_dash(path_str: str) -> Union[Path, str]:
+    if path_str == "-":
+        return path_str
+    return convert_existing_file_path(path_str)
+
+
 # Custom path types for custom converters
 ExistingPath = TypeVar("ExistingPath", bound=Path)
 ExistingFilePath = TypeVar("ExistingFilePath", bound=Path)
 ExistingDirPath = TypeVar("ExistingDirPath", bound=Path)
+ExistingFilePathOrDash = TypeVar(
+    "ExistingFilePathOrDash", bound=Union[Path, Literal["-"]]
+)
 
 DEFAULT_CONVERTERS: Dict[Union[Type, str], Callable[[str], Any]] = {
     ExistingPath: convert_existing_path,
     ExistingFilePath: convert_existing_file_path,
     ExistingDirPath: convert_existing_dir_path,
+    ExistingFilePathOrDash: convert_existing_file_path_or_dash,
 }
 
 

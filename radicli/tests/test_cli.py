@@ -10,6 +10,7 @@ from pathlib import Path
 from radicli import Radicli, Arg
 from radicli.util import SimpleFrozenDict, CommandNotFoundError, CliParserError
 from radicli.util import ExistingPath, ExistingFilePath, ExistingDirPath
+from radicli.util import ExistingFilePathOrDash
 
 
 @contextmanager
@@ -460,5 +461,46 @@ def test_cli_path_converters():
             cli.run()
 
         sys.argv = ["", "test", *args4]
+        with pytest.raises(CliParserError):
+            cli.run()
+
+
+def test_cli_path_or_dash():
+    file_name = "my_file.txt"
+    ran1 = False
+    ran2 = False
+
+    cli = Radicli("test")
+
+    @cli.command("test1", a=Arg())
+    def test1(a: ExistingFilePathOrDash):
+        assert str(a) == str(file_path)
+        nonlocal ran1
+        ran1 = True
+
+    @cli.command("test2", a=Arg())
+    def test2(a: ExistingFilePathOrDash):
+        assert a == "-"
+        nonlocal ran2
+        ran2 = True
+
+    with make_tempdir() as d:
+        file_path = d / file_name
+        file_path.touch()
+        bad_path = Path(d / "x.txt")
+
+        sys.argv = ["", "test1", str(file_path)]
+        cli.run()
+        assert ran1
+
+        sys.argv = ["", "test2", "-"]
+        cli.run()
+        assert ran2
+
+        sys.argv = ["", "test1", str(bad_path)]
+        with pytest.raises(CliParserError):
+            cli.run()
+
+        sys.argv = ["", "test2", "_"]
         with pytest.raises(CliParserError):
             cli.run()
