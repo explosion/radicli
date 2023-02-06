@@ -67,7 +67,7 @@ class ArgparseArg:
     type: Optional[Union[Type, Callable[[str], Any]]] = None
     default: Any = ...
     action: Optional[str] = None
-    choices: Optional[List[str]] = None
+    choices: Optional[Union[List[str], List[Enum]]] = None
     help: Optional[str] = None
 
     def to_argparse(self) -> Tuple[List[str], Dict[str, Any]]:
