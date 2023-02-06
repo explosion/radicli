@@ -1,5 +1,5 @@
 from typing import Any, Callable, Iterable, Type, Union, Optional, Dict, Tuple
-from typing import List, Literal, get_origin, get_args
+from typing import List, Literal, TypeVar, get_origin, get_args
 from enum import Enum
 from dataclasses import dataclass
 from pathlib import Path
@@ -173,6 +173,39 @@ def get_type_name(arg_type: Any) -> str:
 
 def get_prog_name(*path) -> str:
     return " ".join(p for p in path if p)
+
+
+def convert_existing_path(path_str: str) -> Path:
+    path = Path(path_str)
+    if not path.exists():
+        raise CliParserError(f"path does not exist: {path_str}")
+    return path
+
+
+def convert_existing_file_path(path_str: str) -> Path:
+    path = convert_existing_path(path_str)
+    if not path.is_file():
+        raise CliParserError(f"path is not a file path: {path_str}")
+    return path
+
+
+def convert_existing_dir_path(path_str: str) -> Path:
+    path = convert_existing_path(path_str)
+    if not path.is_dir():
+        raise CliParserError(f"path is not a directory path: {path_str}")
+    return path
+
+
+# Custom path types for custom converters
+ExistingPath = TypeVar("ExistingPath", bound=Path)
+ExistingFilePath = TypeVar("ExistingFilePath", bound=Path)
+ExistingDirPath = TypeVar("ExistingDirPath", bound=Path)
+
+DEFAULT_CONVERTERS: Dict[Union[Type, str], Callable[[str], Any]] = {
+    ExistingPath: convert_existing_path,
+    ExistingFilePath: convert_existing_file_path,
+    ExistingDirPath: convert_existing_dir_path,
+}
 
 
 class SimpleFrozenDict(dict):

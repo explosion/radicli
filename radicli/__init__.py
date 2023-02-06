@@ -5,16 +5,13 @@ from dataclasses import dataclass
 from inspect import signature
 import catalogue
 
+from .parser import ArgumentParser
 from .util import Arg, ArgparseArg, get_arg, get_type_name, get_prog_name
-from .util import SimpleFrozenDict, CommandNotFoundError, CliParserError
+from .util import SimpleFrozenDict, CommandNotFoundError
+from .util import DEFAULT_CONVERTERS
 
 
 _CallableT = TypeVar("_CallableT", bound=Callable)
-
-
-class ArgumentParser(argparse.ArgumentParser):
-    def error(self, message: str) -> None:
-        raise CliParserError(message)
 
 
 @dataclass
@@ -48,7 +45,8 @@ class Radicli:
         self.name = name
         self.prog = prog
         self.help = help
-        self.converters = converters
+        self.converters = dict(DEFAULT_CONVERTERS)  # make sure to copy
+        self.converters.update(converters)
         self.extra_key = extra_key
         self.registry = catalogue.create(self.name, "commands")
         self.subcommands = {}
