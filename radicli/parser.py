@@ -1,5 +1,6 @@
 from typing import Any
 import argparse
+import sys
 
 from .util import CliParserError
 
@@ -21,7 +22,7 @@ class ArgumentParser(argparse.ArgumentParser):
         # ArgumentTypeErrors indicate errors
         except argparse.ArgumentTypeError:
             name = getattr(action.type, "__name__", repr(action.type))
-            msg = str(argparse._sys.exc_info()[1])
+            msg = str(sys.exc_info()[1])
             raise argparse.ArgumentError(action, msg)
         # TypeErrors or ValueErrors also indicate errors
         except (TypeError, ValueError) as e:
