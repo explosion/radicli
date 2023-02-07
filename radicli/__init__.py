@@ -5,10 +5,10 @@ from dataclasses import dataclass
 from inspect import signature
 import catalogue
 
-from .parser import ArgumentParser
+from .parser import ArgumentParser, HelpFormatter
 from .util import Arg, ArgparseArg, get_arg, join_strings, format_type, format_table
-from .util import SimpleFrozenDict, CommandNotFoundError, CliParserError
-from .util import DEFAULT_CONVERTERS
+from .util import format_arg_help, SimpleFrozenDict, CommandNotFoundError
+from .util import CliParserError, DEFAULT_CONVERTERS
 
 # Make available for import
 from .util import ExistingPath, ExistingFilePath, ExistingDirPath  # noqa: F401
@@ -214,7 +214,7 @@ class Radicli:
         p = ArgumentParser(
             prog=join_strings(self.prog, name),
             description=description,
-            formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+            formatter_class=HelpFormatter,
             add_help=not has_help,
         )
         self._add_args(p, arg_info)
@@ -277,17 +277,12 @@ class Radicli:
         return values
 
     def _format_info(
-        self,
-        commands: Dict[str, Command],
-        subcommands: Dict[str, catalogue.Registry],
-        max_width: int = 70,
+        self, commands: Dict[str, Command], subcommands: Dict[str, catalogue.Registry]
     ) -> str:
         """Nicely format the available command overview and add subcommands."""
         data = []
         for name, cmd in commands.items():
-            d = (cmd.description or "").strip()[:max_width]
-            d = d.rsplit("." if "." in d else " ", 1)[0] + ("." if "." in d else "...")
-            data.append((f"  {name}", d))
+            data.append((f"  {name}", format_arg_help(cmd.description)))
             if name in subcommands:
                 col = f"Subcommands: {', '.join(subcommands[name].get_all())}"
                 data.append(("", col))

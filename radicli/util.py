@@ -224,6 +224,11 @@ def format_table(data: List[Tuple[str, str]]) -> str:
     return "\n" + "\n".join(rows) + "\n"
 
 
+def format_arg_help(text: Optional[str], max_width: int = 70) -> str:
+    d = (text or "").strip()[:max_width]
+    return d.rsplit("." if "." in d else " ", 1)[0] + ("." if "." in d else "...")
+
+
 def convert_existing_path(path_str: str) -> Path:
     path = Path(path_str)
     if not path.exists():
