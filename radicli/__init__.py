@@ -7,7 +7,7 @@ import catalogue
 
 from .parser import ArgumentParser
 from .util import Arg, ArgparseArg, get_arg, join_strings, format_type, format_table
-from .util import SimpleFrozenDict, CommandNotFoundError
+from .util import SimpleFrozenDict, CommandNotFoundError, CliParserError
 from .util import DEFAULT_CONVERTERS
 
 # Make available for import
@@ -55,7 +55,7 @@ class Radicli:
         self.extra_key = extra_key
         self.registry = catalogue.create(self.name, "commands")
         self.subcommands = {}
-        self._subcommand_key = "subcommand"
+        self._subcommand_key = "__subcommand__"  # should not conflict with arg name!
 
     # Using underscored argument names here to prevent conflicts if CLI commands
     # define arguments called "name" that are passed in via **args
@@ -182,7 +182,7 @@ class Radicli:
                 if not subcommands:
                     raise CommandNotFoundError(command, list(self.registry.get_all()))
                 # Add a dummy parent to support subcommands without parents
-                dummy = Command(name=command, func=lambda x: None, args=[])
+                dummy = Command(name=command, func=lambda *x, **y: None, args=[])
                 self.registry.register(command, func=dummy)
             cmd = self.registry.get(command)
             values = self.parse(
@@ -247,6 +247,8 @@ class Radicli:
         if not sub_key:  # we're not in a subcommand
             values = self._handle_extra(p, values, allow_extra)
             return values
+        if sub_key not in subparsers:
+            raise CliParserError(f"invalid subcommand: '{sub_key}'")
         subparser, subcmd = subparsers[sub_key]
         sub_namespace, sub_extra = subparser.parse_known_args(args[1:])
         sub_values = {**vars(sub_namespace), self.extra_key: sub_extra}

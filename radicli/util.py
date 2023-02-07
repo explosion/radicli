@@ -152,8 +152,10 @@ def get_arg(
         return arg
     if param_type == bool:
         if not name:
-            msg = f"boolean arguments need to be flags, e.g. --{arg.id}"
-            raise InvalidArgumentError(arg.id, msg)
+            raise InvalidArgumentError(
+                arg.id,
+                f"boolean arguments need to be flags, e.g. --{arg.id.replace('_', '-')}",
+            )
         arg.type = None
         if default is True:
             raise InvalidArgumentError(arg.id, "boolean flags need to default to False")
