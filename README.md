@@ -329,3 +329,4 @@ The package includes several custom types implemented as `TypeVar`s with pre-def
 | `ExistingPathOrDash`     | `Union[Path, Literal["-"]]` | Returns an existing path but also accepts `"-"` (typically used to indicate that a function should read from standard input).           |
 | `ExistingFilePathOrDash` | `Union[Path, Literal["-"]]` | Returns an existing file path but also accepts `"-"` (typically used to indicate that a function should read from standard input).      |
 | `ExistingDirPathOrDash`  | `Union[Path, Literal["-"]]` | Returns an existing directory path but also accepts `"-"` (typically used to indicate that a function should read from standard input). |
+| `PathOrDash`             | `Union[Path, Literal["-"]]` | Returns a path but also accepts `"-"` (typically used to indicate that a function should read from standard input).                     |
