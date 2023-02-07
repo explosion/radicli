@@ -538,3 +538,28 @@ def test_cli_path_or_dash():
         sys.argv = ["", "test2", "_"]
         with pytest.raises(CliParserError):
             cli.run()
+
+
+def test_cli_stack_decorators():
+    args = ["--a", "hello", "--b", "1"]
+    ran = 0
+    cli = Radicli("test")
+
+    @cli.command("one", a=Arg("--a"), b=Arg("--b"))
+    @cli.command("two", a=Arg("--a"), b=Arg("--b"))
+    @cli.command("three", a=Arg("--a"), b=Arg("--b"))
+    def test(a: str, b: int):
+        assert a == "hello"
+        assert b == 1
+        nonlocal ran
+        ran += 1
+
+    sys.argv = ["", "one", *args]
+    cli.run()
+    assert ran == 1
+    sys.argv = ["", "two", *args]
+    cli.run()
+    assert ran == 2
+    sys.argv = ["", "three", *args]
+    cli.run()
+    assert ran == 3
