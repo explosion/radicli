@@ -1,4 +1,4 @@
-from typing import List, Iterator, Optional, Dict, Any, Literal
+from typing import List, Iterator, Optional, Literal
 from enum import Enum
 from dataclasses import dataclass
 import pytest
@@ -8,19 +8,9 @@ import tempfile
 import shutil
 from pathlib import Path
 from radicli import Radicli, Arg
-from radicli.util import SimpleFrozenDict, CommandNotFoundError, CliParserError
+from radicli.util import CommandNotFoundError, CliParserError
 from radicli.util import ExistingPath, ExistingFilePath, ExistingDirPath
 from radicli.util import ExistingFilePathOrDash
-
-
-@contextmanager
-def cli_context(
-    command: str, args: List[str], settings: Dict[str, Any] = SimpleFrozenDict()
-) -> Iterator[Radicli]:
-    sys.argv = ["", command, *args]
-    cli = Radicli("test", **settings)
-    yield cli
-    cli.run()
 
 
 @contextmanager
@@ -31,124 +21,134 @@ def make_tempdir() -> Iterator[Path]:
     shutil.rmtree(str(d))
 
 
-def test_cli_no_annots():
-    args = ["hello", "1", "2"]
+def test_cli_sys_argv():
+    cli = Radicli("test")
     ran = False
 
-    with cli_context("test", args) as cli:
+    @cli.command("test")
+    def test(a: str, b: int, c: float):
+        assert a == "hello"
+        assert b == 1
+        assert c == 2.0
+        nonlocal ran
+        ran = True
 
-        @cli.command("test")
-        def test(a: str, b: int, c: float):
-            assert a == "hello"
-            assert b == 1
-            assert c == 2.0
-            nonlocal ran
-            ran = True
+    sys.argv = ["", "test", "hello", "1", "2"]
+    cli.run()
+    assert ran
 
+
+def test_cli_no_annots():
+    cli = Radicli("test")
+    ran = False
+
+    @cli.command("test")
+    def test(a: str, b: int, c: float):
+        assert a == "hello"
+        assert b == 1
+        assert c == 2.0
+        nonlocal ran
+        ran = True
+
+    cli.run(["", "test", "hello", "1", "2"])
     assert ran
 
 
 def test_cli_mix():
-    args = ["hello", "--b", "2", "-C", "3", "--d", "-E"]
+    cli = Radicli("test")
     ran = False
-    with cli_context("test", args) as cli:
 
-        @cli.command(
-            "test",
-            a=Arg(),
-            b=Arg("--b", "-B"),
-            c=Arg("--c", "-C"),
-            d=Arg("--d", "-D"),
-            e=Arg("--e", "-E"),
-            f=Arg("--f", "-F"),
-            g=Arg("--g", "-G"),
-        )
-        def test(a: str, b: int, c: float, d: bool, e: bool, f: bool, g: str = "yo"):
-            assert a == "hello"
-            assert b == 2
-            assert c == 3.0
-            assert d is True
-            assert e is True
-            assert f is False
-            assert g == "yo"
-            nonlocal ran
-            ran = True
+    @cli.command(
+        "test",
+        a=Arg(),
+        b=Arg("--b", "-B"),
+        c=Arg("--c", "-C"),
+        d=Arg("--d", "-D"),
+        e=Arg("--e", "-E"),
+        f=Arg("--f", "-F"),
+        g=Arg("--g", "-G"),
+    )
+    def test(a: str, b: int, c: float, d: bool, e: bool, f: bool, g: str = "yo"):
+        assert a == "hello"
+        assert b == 2
+        assert c == 3.0
+        assert d is True
+        assert e is True
+        assert f is False
+        assert g == "yo"
+        nonlocal ran
+        ran = True
 
+    cli.run(["", "test", "hello", "--b", "2", "-C", "3", "--d", "-E"])
     assert ran
 
 
 def test_cli_lists():
-    args = ["--a", "hello", "--b", "one", "--b", "two"]
+    cli = Radicli("test")
     ran = False
 
-    with cli_context("test", args) as cli:
+    @cli.command("test", a=Arg("--a"), b=Arg("--b"), c=Arg("--c"))
+    def test(a: str, b: List[str], c: Optional[List[int]] = None):
+        assert a == "hello"
+        assert b == ["one", "two"]
+        assert c is None
+        nonlocal ran
+        ran = True
 
-        @cli.command("test", a=Arg("--a"), b=Arg("--b"), c=Arg("--c"))
-        def test(a: str, b: List[str], c: Optional[List[int]] = None):
-            assert a == "hello"
-            assert b == ["one", "two"]
-            assert c is None
-            nonlocal ran
-            ran = True
-
+    cli.run(["", "test", "--a", "hello", "--b", "one", "--b", "two"])
     assert ran
 
 
 def test_cli_different_dest():
-    args = ["--a", "one", "--b", "two"]
+    cli = Radicli("test")
     ran = False
 
-    with cli_context("test", args) as cli:
+    @cli.command("test", first=Arg("--a"), second=Arg("--b"))
+    def test(first: str, second: str):
+        assert first == "one"
+        assert second == "two"
+        nonlocal ran
+        ran = True
 
-        @cli.command("test", first=Arg("--a"), second=Arg("--b"))
-        def test(first: str, second: str):
-            assert first == "one"
-            assert second == "two"
-            nonlocal ran
-            ran = True
-
+    cli.run(["", "test", "--a", "one", "--b", "two"])
     assert ran
 
 
 def test_cli_defaults():
-    args = ["yo", "--c", "one"]
+    cli = Radicli("test")
     ran = False
 
-    with cli_context("test", args) as cli:
+    @cli.command("test", a=Arg(), b=Arg(), c=Arg("--c"), d=Arg("--d"))
+    def test(a: str, b: str = "hey", *, c: List[str], d: Optional[List[int]] = None):
+        assert a == "yo"
+        assert b == "hey"
+        assert c == ["one"]
+        assert d is None
+        nonlocal ran
+        ran = True
 
-        @cli.command("test", a=Arg(), b=Arg(), c=Arg("--c"), d=Arg("--d"))
-        def test(
-            a: str, b: str = "hey", *, c: List[str], d: Optional[List[int]] = None
-        ):
-            assert a == "yo"
-            assert b == "hey"
-            assert c == ["one"]
-            assert d is None
-            nonlocal ran
-            ran = True
-
+    cli.run(["", "test", "yo", "--c", "one"])
     assert ran
 
 
 def test_cli_literals():
-    args = ["--a", "pizza", "--b", "fanta"]
+    cli = Radicli("test")
     ran = False
 
-    with cli_context("test", args) as cli:
+    @cli.command("test", a=Arg("--a"), b=Arg("--b"))
+    def test(a: Literal["pizza", "pasta"], b: Literal["cola", "fanta"]):
+        assert a == "pizza"
+        assert b == "fanta"
+        nonlocal ran
+        ran = True
 
-        @cli.command("test", a=Arg("--a"), b=Arg("--b"))
-        def test(a: Literal["pizza", "pasta"], b: Literal["cola", "fanta"]):
-            assert a == "pizza"
-            assert b == "fanta"
-            nonlocal ran
-            ran = True
-
+    cli.run(["", "test", "--a", "pizza", "--b", "fanta"])
     assert ran
 
 
 def test_cli_literals_list():
-    ran = False
     cli = Radicli("test")
+    ran = False
 
     @cli.command("test", a=Arg("--a"))
     def test(a: List[Literal["pizza", "pasta", "burger"]]):
@@ -164,7 +164,7 @@ def test_cli_literals_list():
 
 
 def test_cli_enums():
-    args = ["--a", "burger", "--b", "beer"]
+    cli = Radicli("test")
     ran = False
 
     class FoodEnum(Enum):
@@ -177,15 +177,14 @@ def test_cli_enums():
         juice = "🧃"
         beer = "🍺"
 
-    with cli_context("test", args) as cli:
+    @cli.command("test", a=Arg("--a"), b=Arg("--b"))
+    def test(a: FoodEnum, b: DrinkEnum):
+        assert a == FoodEnum.burger
+        assert b == DrinkEnum.beer
+        nonlocal ran
+        ran = True
 
-        @cli.command("test", a=Arg("--a"), b=Arg("--b"))
-        def test(a: FoodEnum, b: DrinkEnum):
-            assert a == FoodEnum.burger
-            assert b == DrinkEnum.beer
-            nonlocal ran
-            ran = True
-
+    cli.run(["", "test", "--a", "burger", "--b", "beer"])
     assert ran
 
 
@@ -194,57 +193,53 @@ def test_cli_enums():
     [(["--verbose", "--verbose"], 2), (["-VVVVV"], 5)],
 )
 def test_cli_count(args, count):
+    cli = Radicli("test")
     ran = False
 
-    with cli_context("test", args) as cli:
+    @cli.command("test", verbose=Arg("--verbose", "-V", count=True))
+    def test(verbose: int):
+        assert verbose == count
+        nonlocal ran
+        ran = True
 
-        @cli.command("test", verbose=Arg("--verbose", "-V", count=True))
-        def test(verbose: int):
-            assert verbose == count
-            nonlocal ran
-            ran = True
-
+    cli.run(["", "test", *args])
     assert ran
 
 
 def test_cli_converter():
-    args = ["--a", "hello", "--b", "world"]
+    cli = Radicli("test")
     converter = lambda x: x.upper()
     ran = False
 
-    with cli_context("test", args) as cli:
+    @cli.command("test", a=Arg("--a"), b=Arg("--b", converter=converter))
+    def test(a: str, b: str):
+        assert a == "hello"
+        assert b == "WORLD"
+        nonlocal ran
+        ran = True
 
-        @cli.command("test", a=Arg("--a"), b=Arg("--b", converter=converter))
-        def test(a: str, b: str):
-            assert a == "hello"
-            assert b == "WORLD"
-            nonlocal ran
-            ran = True
-
+    cli.run(["", "test", "--a", "hello", "--b", "world"])
     assert ran
 
 
 def test_cli_invalid_converter():
     """Test that errors in converters aren't masked by argparse."""
     # Previously: argument --a: invalid converter value: 'hello'
+    cli = Radicli("test")
     error_msg = "This is an error!"
 
     def converter(value):
         raise TypeError(error_msg)
 
-    cli = Radicli("test")
-
     @cli.command("test", a=Arg("--a", converter=converter))
     def test(a: str):
         ...
 
-    sys.argv = ["", "test", "--a", "hello"]
     with pytest.raises(CliParserError, match=error_msg):
-        cli.run()
+        cli.run(["", "test", "--a", "hello"])
 
 
 def test_cli_global_converters():
-    args = ["--a", "hello", "--b", "foo", "--b", "bar", "--c", "123|Person"]
     collected = []
 
     def convert_list(value: str):
@@ -265,66 +260,62 @@ def test_cli_global_converters():
         List[str]: convert_list,
         CustomType: convert_custom_type,
     }
+
+    cli = Radicli("test", converters=converters)
     ran = False
 
-    with cli_context("test", args, {"converters": converters}) as cli:
+    @cli.command("test", a=Arg("--a"), b=Arg("--b"), c=Arg("--c"))
+    def test(a: str, b: List[str], c: CustomType):
+        assert a == "HELLO"
+        assert b == ["FOO", "BAR"]
+        assert isinstance(c, CustomType)
+        assert c.id == 123
+        assert c.name == "Person"
+        nonlocal ran
+        ran = True
 
-        @cli.command("test", a=Arg("--a"), b=Arg("--b"), c=Arg("--c"))
-        def test(a: str, b: List[str], c: CustomType):
-            assert a == "HELLO"
-            assert b == ["FOO", "BAR"]
-            assert isinstance(c, CustomType)
-            assert c.id == 123
-            assert c.name == "Person"
-            nonlocal ran
-            ran = True
-
+    args = ["", "test", "--a", "hello", "--b", "foo", "--b", "bar", "--c", "123|Person"]
+    cli.run(args)
     assert ran
 
 
 def test_cli_with_extra():
-    args = ["--a", "hello", "--b", "1", "--hello", "2", "--world"]
+    cli = Radicli("test")
     ran = False
 
-    with cli_context("test", args) as cli:
+    @cli.command_with_extra("test", a=Arg("--a"), b=Arg("--b"))
+    def test(a: str, b: int, _extra: List[str]):
+        assert a == "hello"
+        assert b == 1
+        assert _extra == ["--hello", "2", "--world"]
+        nonlocal ran
+        ran = True
 
-        @cli.command_with_extra("test", a=Arg("--a"), b=Arg("--b"))
-        def test(a: str, b: int, _extra: List[str]):
-            assert a == "hello"
-            assert b == 1
-            assert _extra == ["--hello", "2", "--world"]
-            nonlocal ran
-            ran = True
-
+    cli.run(["", "test", "--a", "hello", "--b", "1", "--hello", "2", "--world"])
     assert ran
 
 
 def test_cli_with_extra_custom_key():
-    args = ["--a", "hello", "--b", "1", "--hello", "2", "--world"]
+    cli = Radicli("test", extra_key="additional")
     ran = False
 
-    with cli_context("test", args, {"extra_key": "additional"}) as cli:
+    @cli.command_with_extra("test", a=Arg("--a"), b=Arg("--b"))
+    def test(a: str, b: int, additional: List[str]):
+        assert a == "hello"
+        assert b == 1
+        assert additional == ["--hello", "2", "--world"]
+        nonlocal ran
+        ran = True
 
-        @cli.command_with_extra("test", a=Arg("--a"), b=Arg("--b"))
-        def test(a: str, b: int, additional: List[str]):
-            assert a == "hello"
-            assert b == 1
-            assert additional == ["--hello", "2", "--world"]
-            nonlocal ran
-            ran = True
-
+    cli.run(["", "test", "--a", "hello", "--b", "1", "--hello", "2", "--world"])
     assert ran
 
 
 def test_cli_subcommands():
-    args_parent = ["--a", "1", "--b", "hello"]
-    args_child1 = ["--a", "hey", "--b", "2", "--c"]
-    args_child2 = ["yo", "--y", "pasta"]
+    cli = Radicli("test")
     ran_parent = False
     ran_child1 = False
     ran_child2 = False
-
-    cli = Radicli("test")
 
     @cli.command("parent", a=Arg("--a"), b=Arg("--b"))
     def parent(a: int, b: str):
@@ -348,41 +339,31 @@ def test_cli_subcommands():
         nonlocal ran_child2
         ran_child2 = True
 
-    sys.argv = ["", "parent", *args_parent]
-    cli.run()
+    args_parent = ["--a", "1", "--b", "hello"]
+    args_child1 = ["--a", "hey", "--b", "2", "--c"]
+    args_child2 = ["yo", "--y", "pasta"]
+
+    cli.run(["", "parent", *args_parent])
     assert ran_parent
-
-    sys.argv = ["", "parent", "child1", *args_child1]
-    cli.run()
+    cli.run(["", "parent", "child1", *args_child1])
     assert ran_child1
-
-    sys.argv = ["", "parent", "child2", *args_child2]
-    cli.run()
+    cli.run(["", "parent", "child2", *args_child2])
     assert ran_child2
-
-    sys.argv = ["", "child1", *args_child1]
     with pytest.raises(CommandNotFoundError):
-        cli.run()
-
-    sys.argv = ["", "parent", "child3"]
+        cli.run(["", "child1", *args_child1])
     with pytest.raises(CliParserError):
-        cli.run()
-
-    sys.argv = ["", "parent", "child2", *args_child1]
+        cli.run(["", "parent", "child3"])
     with pytest.raises(CliParserError):
-        cli.run()
+        cli.run(["", "parent", "child2", *args_child1])
 
 
 def test_cli_subcommands_parent_extra():
     # Known limitation: extra arguments on parents with subcommands need to
     # be prefixed by - or --, otherwise they'll be falsely interpreted as a
     # subcommand.
-    args_parent = ["--a", "1", "--b", "hello", "--xyz"]
-    args_child = ["--a", "hey", "--b", "2"]
+    cli = Radicli("test")
     ran_parent = False
     ran_child = False
-
-    cli = Radicli("test")
 
     @cli.command_with_extra("parent", a=Arg("--a"), b=Arg("--b"))
     def parent(a: int, b: str, _extra: List[str]):
@@ -399,22 +380,16 @@ def test_cli_subcommands_parent_extra():
         nonlocal ran_child
         ran_child = True
 
-    sys.argv = ["", "parent", *args_parent]
-    cli.run()
+    cli.run(["", "parent", "--a", "1", "--b", "hello", "--xyz"])
     assert ran_parent
-
-    sys.argv = ["", "parent", "child", *args_child]
-    cli.run()
+    cli.run(["", "parent", "child", "--a", "hey", "--b", "2"])
     assert ran_child
 
 
 def test_cli_subcommands_child_extra():
-    args_parent = ["--a", "1", "--b", "hello"]
-    args_child = ["--a", "hey", "--b", "2", "xyz"]
+    cli = Radicli("test")
     ran_parent = False
     ran_child = False
-
-    cli = Radicli("test")
 
     @cli.command("parent", a=Arg("--a"), b=Arg("--b"))
     def parent(a: int, b: str):
@@ -431,22 +406,16 @@ def test_cli_subcommands_child_extra():
         nonlocal ran_child
         ran_child = True
 
-    sys.argv = ["", "parent", *args_parent]
-    cli.run()
+    cli.run(["", "parent", "--a", "1", "--b", "hello"])
     assert ran_parent
-
-    sys.argv = ["", "parent", "child", *args_child]
-    cli.run()
+    cli.run(["", "parent", "child", "--a", "hey", "--b", "2", "xyz"])
     assert ran_child
 
 
 def test_cli_subcommands_no_parent():
-    args_child1 = ["--a", "hey", "--b", "2", "--c"]
-    args_child2 = ["yo", "--y", "pasta"]
+    cli = Radicli("test")
     ran_child1 = False
     ran_child2 = False
-
-    cli = Radicli("test")
 
     @cli.subcommand("parent", "child1", a=Arg("--a"), b=Arg("--b"), c=Arg("--c"))
     def child1(a: str, b: int, c: bool):
@@ -463,21 +432,17 @@ def test_cli_subcommands_no_parent():
         nonlocal ran_child2
         ran_child2 = True
 
-    sys.argv = ["", "parent", "child1", *args_child1]
-    cli.run()
+    cli.run(["", "parent", "child1", "--a", "hey", "--b", "2", "--c"])
     assert ran_child1
-
-    sys.argv = ["", "parent", "child2", *args_child2]
-    cli.run()
+    cli.run(["", "parent", "child2", "yo", "--y", "pasta"])
     assert ran_child2
 
 
 def test_cli_path_converters():
+    cli = Radicli("test")
     dir_name = "my_dir"
     file_name = "my_file.txt"
     ran = False
-
-    cli = Radicli("test")
 
     @cli.command("test", a=Arg("--a"), b=Arg("--b"), c=Arg("--c"))
     def test(a: ExistingPath, b: ExistingFilePath, c: ExistingDirPath):
@@ -499,29 +464,21 @@ def test_cli_path_converters():
         args3 = ["--a", str(file_path), "--b", str(dir_path), "--c", str(dir_path)]
         args4 = ["--a", str(file_path), "--b", str(file_path), "--c", str(file_path)]
 
-        sys.argv = ["", "test", *args1]
-        cli.run()
+        cli.run(["", "test", *args1])
         assert ran
-
-        sys.argv = ["", "test", *args2]
         with pytest.raises(CliParserError):
-            cli.run()
-
-        sys.argv = ["", "test", *args3]
+            cli.run(["", "test", *args2])
         with pytest.raises(CliParserError):
-            cli.run()
-
-        sys.argv = ["", "test", *args4]
+            cli.run(["", "test", *args3])
         with pytest.raises(CliParserError):
-            cli.run()
+            cli.run(["", "test", *args4])
 
 
 def test_cli_path_or_dash():
+    cli = Radicli("test")
     file_name = "my_file.txt"
     ran1 = False
     ran2 = False
-
-    cli = Radicli("test")
 
     @cli.command("test1", a=Arg())
     def test1(a: ExistingFilePathOrDash):
@@ -540,27 +497,19 @@ def test_cli_path_or_dash():
         file_path.touch()
         bad_path = Path(d / "x.txt")
 
-        sys.argv = ["", "test1", str(file_path)]
-        cli.run()
+        cli.run(["", "test1", str(file_path)])
         assert ran1
-
-        sys.argv = ["", "test2", "-"]
-        cli.run()
+        cli.run(["", "test2", "-"])
         assert ran2
-
-        sys.argv = ["", "test1", str(bad_path)]
         with pytest.raises(CliParserError):
-            cli.run()
-
-        sys.argv = ["", "test2", "_"]
+            cli.run(["", "test1", str(bad_path)])
         with pytest.raises(CliParserError):
-            cli.run()
+            cli.run(["", "test2", "_"])
 
 
 def test_cli_stack_decorators():
-    args = ["--a", "hello", "--b", "1"]
-    ran = 0
     cli = Radicli("test")
+    ran = 0
 
     @cli.command("one", a=Arg("--a"), b=Arg("--b"))
     @cli.command("two", a=Arg("--a"), b=Arg("--b"))
@@ -571,12 +520,10 @@ def test_cli_stack_decorators():
         nonlocal ran
         ran += 1
 
-    sys.argv = ["", "one", *args]
-    cli.run()
+    args = ["--a", "hello", "--b", "1"]
+    cli.run(["", "one", *args])
     assert ran == 1
-    sys.argv = ["", "two", *args]
-    cli.run()
+    cli.run(["", "two", *args])
     assert ran == 2
-    sys.argv = ["", "three", *args]
-    cli.run()
+    cli.run(["", "three", *args])
     assert ran == 3
