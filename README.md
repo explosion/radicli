@@ -10,7 +10,7 @@
 [![Current Release Version](https://img.shields.io/github/v/release/explosion/radicli.svg?style=flat-square&include_prereleases&logo=github)](https://github.com/explosion/radicli/releases)
 [![pypi Version](https://img.shields.io/pypi/v/radicli.svg?style=flat-square&logo=pypi&logoColor=white)](https://pypi.org/project/radicli/)
 
-# ⏳ Installation
+## ⏳ Installation
 
 Note that `radicli` currently requires **Python 3.8+**.
 
@@ -18,7 +18,7 @@ Note that `radicli` currently requires **Python 3.8+**.
 pip install radicli
 ```
 
-# 👩‍💻 Usage
+## 👩‍💻 Usage
 
 The `Radicli` class sets up the CLI and provides decorators for commands and subcommands. The `Arg` dataclass can be used to describe how the arguments should be presented on the CLI. Types and defaults are read from the Python functions. You typically don't have to change anything about how you implement your Python functions to make them available as a CLI command.
 
@@ -48,7 +48,7 @@ $ python cli.py hello Alex --age 35 --greet
 Hello Alex (35)!
 ```
 
-## Subcommands
+### Subcommands
 
 `radicli` supports one level of nested subcommands. The parent command may exist independently, but it doesn't have to.
 
@@ -67,13 +67,13 @@ $ python cli.py parent child1 --name Alex
 $ python cli.py parent child2 --age 35
 ```
 
-## Working with types
+### Working with types
 
 For built-in callable types like `str`, `int` or `float`, the string value received from the CLI is passed to the callable, e.g. `int(value)`. More complex, nested types are resolved recursively. The library also provides several built-in [custom types](#custom-types-and-converters) for handling things like file paths.
 
 > ⚠️ Note that there's a limit to what can reasonably be supported by a CLI interface so it's recommended to avoid overly complex types. For a `Union` type, the **first** type of the union is used. `Optional` types are expected to be left unset to default to `None`. If a value is provided, the type marked as optional is used, e.g. `str` for `Optional[str]`.
 
-### Lists
+#### Lists
 
 By default, list types are implemented by allowing the CLI argument to occur more than once. The value of each element is parsed using the type defined for list members.
 
@@ -90,7 +90,7 @@ $ python cli.py hello --fruits apple --fruits banana --fruits cherry
 
 If you don't like this syntax, you can also add a `converter` to the `Arg` definition that handles the value differently, e.g. by splitting a comma-separated string. This would let the user write `--fruits apple,banana,cherry`, while still passing a list to the Python function.
 
-### Literals and Enums
+#### Literals and Enums
 
 Arguments that can only be one of a given set of values can be typed as a `Literal`. Any values not in the list will raise a CLI error.
 
@@ -115,7 +115,7 @@ def hello(color: ColorEnum):
     print(color)  # this will be the enum, e.g. ColorEnum.RED
 ```
 
-## Using custom types and converters
+### Using custom types and converters
 
 `radicli` supports defining custom converter functions to handle individual arguments, as well as all instances of a given type globally. Converters take the string value provided on the CLI and should return the value passed to the function, consistent with the type. They can also raise validation errors.
 
@@ -132,7 +132,7 @@ $ python cli.py hello --name Alex
 Hello ALEX!
 ```
 
-### Global converters for custom types
+#### Global converters for custom types
 
 The `converters` argument lets you provide a dict of types mapped to converter functions when initializing `Radicli`. If an argument of that type is encountered, the value is converted automatically. This ensures your Python functions remain composable and don't need additional logic only to satisfy the CLI usage.
 
@@ -180,7 +180,7 @@ def convert_existing_path(path_str: str) -> Path:
 converters = {ExistingPath: convert_existing_path}
 ```
 
-## Allowing extra arguments
+### Allowing extra arguments
 
 If you want to capture and consume extra arguments not defined in the function and argument annotations, you can use the `command_with_extra` or `subcommand_with_extra` decorators. Extra arguments are passed to the function as a list of strings to an argument `_extra` (which you can change via the `extra_key` setting when initializing the CLI). spaCy uses this feature to pass settings to `pip` in its [`download` command](https://spacy.io/api/cli#download) or to allow arbitrary [configuration overrides](https://spacy.io/usage/training#config-overrides) during training.
 
@@ -195,9 +195,9 @@ $ python cli.py hello --name Alex --age 35 --color blue
 Hello Alex! ['--age', '35', '--color', 'blue']
 ```
 
-# 🎛 API
+## 🎛 API
 
-## <kbd>dataclass</kbd> `Arg`
+### <kbd>dataclass</kbd> `Arg`
 
 Dataclass for describing argument meta information. This is typically used in the command decorators and only includes information for how the argument should be handled on the CLI. Argument types and defaults are read from the Python function.
 
@@ -208,9 +208,9 @@ Dataclass for describing argument meta information. This is typically used in th
 | `help`      | `Optional[str]`                  | Help text for argument, used for `--help`.                                                              |
 | `converter` | `Optional[Callable[[str], Any]]` | Converter function that takes the string from the CLI value and returns a value passed to the function. |
 
-## <kbd>class</kbd> `Radicli`
+### <kbd>class</kbd> `Radicli`
 
-### <kbd>method</kbd> `Radicli.__init__`
+#### <kbd>method</kbd> `Radicli.__init__`
 
 Initialize the CLI and create the registry.
 
@@ -228,7 +228,7 @@ cli = Radicli(name="spacy", prog="python -m spacy")
 | `converters` | `Dict[Type, Callable[[str], Any]]` | Dict mapping types to converter functions. All arguments with these types will then be passed to the respective converter.                                |
 | `extra_key`  | `str`                              | Name of function argument that receives extra arguments if the `command_with_extra` or `subcommand_with_extra` decorator is used. Defaults to `"_extra"`. |
 
-### <kbd>decorator</kbd> `Radicli.command`, `Radicli.command_with_extra`
+#### <kbd>decorator</kbd> `Radicli.command`, `Radicli.command_with_extra`
 
 The decorator used to wrap top-level command functions.
 
@@ -270,7 +270,7 @@ Hello Alex (35) ['--color', 'red']
 | `**args`    | `Arg`      | Keyword arguments defining the argument information. Names need to match the function arguments. If no argument annotations are defined, all arguments are treated as positional. |
 | **RETURNS** | `Callable` | The wrapped function.                                                                                                                                                             |
 
-### <kbd>decorator</kbd> `Radicli.subcommand`, `Radicli.subcommand_with_extra`
+#### <kbd>decorator</kbd> `Radicli.subcommand`, `Radicli.subcommand_with_extra`
 
 The decorator used to wrap one level of subcommand functions.
 
@@ -303,7 +303,7 @@ Hello world, Alex! ['--color', 'blue']
 | `**args`    | `Arg`      | Keyword arguments defining the argument information. Names need to match the function arguments. |
 | **RETURNS** | `Callable` | The wrapped function.                                                                            |
 
-### <kbd>method</kbd> `Radicli.run`
+#### <kbd>method</kbd> `Radicli.run`
 
 Run the CLI. Typically called in a `if __name__ == "__main__":` block at the end of a file or in a package's `__main__.py` to allow executing the CLI via `python -m [package]`.
 
@@ -316,7 +316,7 @@ if __name__ == "__main__":
 | -------- | --------------------- | ----------------------------------------------------------------------------------------- |
 | `args`   | `Optional[List[str]]` | Optional command to pass in. Will be read from `sys.argv` if not set (standard use case). |
 
-## Custom types and converters
+### Custom types and converters
 
 The package includes several custom types implemented as `TypeVar`s with pre-defined converter functions. If these custom types are used in the decorated function, the values received from the CLI will be converted and validated accordingly.
 
