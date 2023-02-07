@@ -1,5 +1,4 @@
 from typing import Any, Callable, Dict, List, Optional, Type, TypeVar, Tuple
-import argparse
 import sys
 from dataclasses import dataclass
 from inspect import signature
@@ -35,6 +34,7 @@ class Radicli:
     help: Optional[str]
     converters: Dict[Type, Callable[[str], Any]]
     extra_key: str
+    registry: catalogue.Registry
     subcommands: Dict[str, catalogue.Registry]
     _subcommand_key: str
     _help_arg: str

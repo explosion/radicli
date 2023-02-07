@@ -14,23 +14,17 @@ class ArgumentParser(argparse.ArgumentParser):
     def _get_value(self, action: argparse.Action, arg_string: str) -> Any:
         type_func = self._registry_get("type", action.type, action.type)
         if not callable(type_func):
-            msg = "%r is not callable"
-            raise argparse.ArgumentError(action, msg % type_func)
-        # convert the value to the appropriate type
+            raise argparse.ArgumentError(action, f"{type_func!r} is not callable")
         try:
             result = type_func(arg_string)
-        # ArgumentTypeErrors indicate errors
         except argparse.ArgumentTypeError:
             name = getattr(action.type, "__name__", repr(action.type))
-            msg = str(sys.exc_info()[1])
-            raise argparse.ArgumentError(action, msg)
-        # TypeErrors or ValueErrors also indicate errors
+            raise argparse.ArgumentError(action, str(sys.exc_info()[1]))
         except (TypeError, ValueError) as e:
             name = getattr(action.type, "__name__", repr(action.type))
             arg = argparse._get_action_name(action)
             msg = f"argument {arg}: error encountered in {name} for value: {arg_string}\n{e}"
             raise CliParserError(msg) from e
-        # return the converted value
         return result
 
 
