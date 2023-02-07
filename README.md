@@ -321,9 +321,11 @@ if __name__ == "__main__":
 
 The package includes several custom types implemented as `TypeVar`s with pre-defined converter functions. If these custom types are used in the decorated function, the values received from the CLI will be converted and validated accordingly.
 
-| Name                     | Type                        | Description                                                                                                                   |
-| ------------------------ | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| `ExistingPath`           | `Path`                      | Returns a path and checks that it exists.                                                                                     |
-| `ExistingFilePath`       | `Path`                      | Returns a path and checks that it exists and is a file.                                                                       |
-| `ExistingDirPath`        | `Path`                      | Returns a path and checks that it exists and is a directory.                                                                  |
-| `ExistingFilePathOrDash` | `Union[Path, Literal["-"]]` | Returns an existing path but also accepts `"-"` (typically used to indicate that a function should read from standard input). |
+| Name                     | Type                        | Description                                                                                                                             |
+| ------------------------ | --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `ExistingPath`           | `Path`                      | Returns a path and checks that it exists.                                                                                               |
+| `ExistingFilePath`       | `Path`                      | Returns a path and checks that it exists and is a file.                                                                                 |
+| `ExistingDirPath`        | `Path`                      | Returns a path and checks that it exists and is a directory.                                                                            |
+| `ExistingPathOrDash`     | `Union[Path, Literal["-"]]` | Returns an existing path but also accepts `"-"` (typically used to indicate that a function should read from standard input).           |
+| `ExistingFilePathOrDash` | `Union[Path, Literal["-"]]` | Returns an existing file path but also accepts `"-"` (typically used to indicate that a function should read from standard input).      |
+| `ExistingDirPathOrDash`  | `Union[Path, Literal["-"]]` | Returns an existing directory path but also accepts `"-"` (typically used to indicate that a function should read from standard input). |
