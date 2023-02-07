@@ -56,33 +56,35 @@ class Radicli:
         self.subcommands = {}
         self._subcommand_key = "subcommand"
 
-    def command(self, name: str, **args: Arg) -> Callable[[_CallableT], _CallableT]:
+    # Using underscored argument names here to prevent conflicts if CLI commands
+    # define arguments called "name" that are passed in via **args
+    def command(self, _name: str, **args: Arg) -> Callable[[_CallableT], _CallableT]:
         """The decorator used to wrap command functions."""
-        return self._command(name, args, self.registry, allow_extra=False)
+        return self._command(_name, args, self.registry, allow_extra=False)
 
     def command_with_extra(
-        self, name: str, **args: Arg
+        self, _name: str, **args: Arg
     ) -> Callable[[_CallableT], _CallableT]:
         """
         The decorator used to wrap command functions. Supports additional
         arguments passed in as the keyword arg self.extra_key as a list.
         """
-        return self._command(name, args, self.registry, allow_extra=True)
+        return self._command(_name, args, self.registry, allow_extra=True)
 
     def subcommand(
-        self, parent: str, name: str, **args: Arg
+        self, _parent: str, _name: str, **args: Arg
     ) -> Callable[[_CallableT], _CallableT]:
         """The decorator used to wrap subcommand functions."""
-        return self._subcommand(parent, name, args, allow_extra=False)
+        return self._subcommand(_parent, _name, args, allow_extra=False)
 
     def subcommand_with_extra(
-        self, parent: str, name: str, **args: Arg
+        self, _parent: str, _name: str, **args: Arg
     ) -> Callable[[_CallableT], _CallableT]:
         """
         The decorator used to wrap subcommand functions. Supports additional
         arguments passed in as the keyword arg self.extra_key as a list.
         """
-        return self._subcommand(parent, name, args, allow_extra=True)
+        return self._subcommand(_parent, _name, args, allow_extra=True)
 
     def _subcommand(
         self, parent: str, name: str, args: Dict[str, Any], *, allow_extra: bool = False
