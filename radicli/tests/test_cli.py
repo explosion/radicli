@@ -527,3 +527,18 @@ def test_cli_stack_decorators():
     assert ran == 2
     cli.run(["", "three", *args])
     assert ran == 3
+
+
+def test_cli_custom_help_arg():
+    cli = Radicli("test")
+    ran = False
+
+    @cli.command("test", a=Arg("--a"), show_help=Arg("--help"))
+    def test(a: str, show_help: bool):
+        assert a == "hello"
+        assert show_help
+        nonlocal ran
+        ran = True
+
+    cli.run(["", "test", "--a", "hello", "--help"])
+    assert ran

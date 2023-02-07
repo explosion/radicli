@@ -37,6 +37,7 @@ class Radicli:
     extra_key: str
     subcommands: Dict[str, catalogue.Registry]
     _subcommand_key: str
+    _help_arg: str
 
     def __init__(
         self,
@@ -56,6 +57,7 @@ class Radicli:
         self.registry = catalogue.create(self.name, "commands")
         self.subcommands = {}
         self._subcommand_key = "__subcommand__"  # should not conflict with arg name!
+        self._help_arg = "--help"
 
     # Using underscored argument names here to prevent conflicts if CLI commands
     # define arguments called "name" that are passed in via **args
@@ -169,7 +171,7 @@ class Radicli:
         `if __name__ == "__main__":` block.
         """
         run_args = args if args is not None else sys.argv
-        if len(run_args) <= 1 or run_args[1] == "--help":
+        if len(run_args) <= 1 or run_args[1] == self._help_arg:
             commands = self.registry.get_all()
             print(self._format_info(commands, self.subcommands))
         else:
@@ -208,16 +210,14 @@ class Radicli:
         allow_extra: bool = False,
     ) -> Dict[str, Any]:
         """Parse a list of arguments. Can also be used for testing."""
+        has_help = any(arg.name == self._help_arg for arg in arg_info)
         p = ArgumentParser(
             prog=join_strings(self.prog, name),
             description=description,
             formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+            add_help=not has_help,
         )
-        for arg in arg_info:
-            if arg.id == self.extra_key:
-                continue
-            func_args, func_kwargs = arg.to_argparse()
-            p.add_argument(*func_args, **func_kwargs)
+        self._add_args(p, arg_info)
         subparsers: Dict[str, Tuple[ArgumentParser, Command]] = {}
         if subcommands:
             # We're using the dest to determine whether subcommand was called
@@ -227,18 +227,16 @@ class Radicli:
                 parser_class=ArgumentParser,
             )
             for sub_name, sub_cmd in subcommands.items():
+                has_help = any(arg.name == self._help_arg for arg in sub_cmd.args)
                 subp = sp.add_parser(
                     sub_cmd.name,
                     description=sub_cmd.description,
                     help=sub_cmd.description,
                     prog=join_strings(self.prog, sub_cmd.parent, sub_name),
+                    add_help=not has_help,
                 )
                 subparsers[sub_cmd.name] = (subp, sub_cmd)
-                for sub_arg in sub_cmd.args:
-                    if sub_arg.id == self.extra_key:
-                        continue
-                    sub_func_args, sub_func_kwargs = sub_arg.to_argparse()
-                    subp.add_argument(*sub_func_args, **sub_func_kwargs)
+                self._add_args(subp, sub_cmd.args)
         # Handling of subcommands is a bit convoluted
         # https://docs.python.org/3/library/argparse.html#sub-commands
         namespace, extra = p.parse_known_args(args)
@@ -254,6 +252,14 @@ class Radicli:
         sub_values = {**vars(sub_namespace), self.extra_key: sub_extra}
         sub_values = self._handle_extra(p, sub_values, subcmd.allow_extra)
         return {**sub_values, self._subcommand_key: sub_key}
+
+    def _add_args(self, parser: ArgumentParser, args: List[ArgparseArg]) -> None:
+        """Add arguments to a parser or subparser."""
+        for arg in args:
+            if arg.id == self.extra_key:
+                continue
+            func_args, func_kwargs = arg.to_argparse()
+            parser.add_argument(*func_args, **func_kwargs)
 
     def _handle_extra(
         self, parser: ArgumentParser, values: Dict[str, Any], allow_extra: bool
