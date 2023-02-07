@@ -146,6 +146,23 @@ def test_cli_literals():
     assert ran
 
 
+def test_cli_literals_list():
+    ran = False
+    cli = Radicli("test")
+
+    @cli.command("test", a=Arg("--a"))
+    def test(a: List[Literal["pizza", "pasta", "burger"]]):
+        assert a == ["pasta", "pizza"]
+        nonlocal ran
+        ran = True
+
+    cli.run(["", "test", "--a", "pasta", "--a", "pizza"])
+    assert ran
+
+    with pytest.raises(CliParserError):
+        cli.run(["", "test", "--a", "burger", "--a", "fries"])
+
+
 def test_cli_enums():
     args = ["--a", "burger", "--b", "beer"]
     ran = False

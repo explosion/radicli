@@ -171,6 +171,13 @@ def get_arg(
         arg.type = type(args[0])
         return arg
     if origin in (list, IterableType):
+        if len(args) and get_origin(args[0]) == Literal:
+            literal_args = get_args(args[0])
+            if literal_args:
+                arg.type = type(literal_args[0])
+                arg.choices = list(literal_args)
+                arg.action = "append"
+                return arg
         arg.type = find_base_type(args)
         arg.action = "append"
         return arg
