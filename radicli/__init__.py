@@ -12,7 +12,8 @@ from .util import DEFAULT_CONVERTERS
 
 # Make available for import
 from .util import ExistingPath, ExistingFilePath, ExistingDirPath  # noqa: F401
-from .util import ExistingFilePathOrDash  # noqa: F401
+from .util import ExistingPathOrDash, ExistingFilePathOrDash, PathOrDash  # noqa: F401
+from .util import ExistingDirPathOrDash  # noqa: F401
 
 
 _CallableT = TypeVar("_CallableT", bound=Callable)
