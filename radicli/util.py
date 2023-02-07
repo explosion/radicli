@@ -104,7 +104,7 @@ def get_arg(
     shorthand: Optional[str] = None,
     help: Optional[str] = None,
     default: Optional[Any] = ...,
-    get_converter: Optional[Callable[[Type], Optional[Callable[[Type], Any]]]] = None,
+    get_converter: Optional[Callable[[Type], Optional[Callable[[str], Any]]]] = None,
     skip_resolve: bool = False,
 ) -> ArgparseArg:
     """Generate an argument to add to argparse and interpret types if possible."""
@@ -191,7 +191,7 @@ def format_type(arg_type: Any) -> str:
     return type_str.replace("typing.", "")
 
 
-def join_strings(*strings, char: str = " ") -> str:
+def join_strings(*strings: Optional[str], char: str = " ") -> str:
     return char.join(x for x in strings if x)
 
 

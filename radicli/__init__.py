@@ -1,4 +1,4 @@
-from typing import Any, Callable, Dict, List, Optional, Type, TypeVar, Union, Tuple
+from typing import Any, Callable, Dict, List, Optional, Type, TypeVar, Tuple
 import argparse
 import sys
 from dataclasses import dataclass
@@ -32,7 +32,7 @@ class Radicli:
     name: str
     prog: Optional[str]
     help: Optional[str]
-    converters: Dict[Union[Type, str], Callable[[Type], Any]]
+    converters: Dict[Type, Callable[[str], Any]]
     extra_key: str
     subcommands: Dict[str, catalogue.Registry]
     _subcommand_key: str
@@ -42,7 +42,7 @@ class Radicli:
         name: str,
         prog: Optional[str] = None,
         help: Optional[str] = None,
-        converters: Dict[Union[Type, str], Callable[[Type], Any]] = SimpleFrozenDict(),
+        converters: Dict[Type, Callable[[str], Any]] = SimpleFrozenDict(),
         extra_key: str = "_extra",
     ) -> None:
         """Initialize the CLI and create the registry."""
@@ -56,12 +56,12 @@ class Radicli:
         self.subcommands = {}
         self._subcommand_key = "subcommand"
 
-    def command(self, name: str, **args) -> Callable[[_CallableT], _CallableT]:
+    def command(self, name: str, **args: Arg) -> Callable[[_CallableT], _CallableT]:
         """The decorator used to wrap command functions."""
         return self._command(name, args, self.registry, allow_extra=False)
 
     def command_with_extra(
-        self, name: str, **args
+        self, name: str, **args: Arg
     ) -> Callable[[_CallableT], _CallableT]:
         """
         The decorator used to wrap command functions. Supports additional
@@ -70,13 +70,13 @@ class Radicli:
         return self._command(name, args, self.registry, allow_extra=True)
 
     def subcommand(
-        self, parent: str, name: str, **args
+        self, parent: str, name: str, **args: Arg
     ) -> Callable[[_CallableT], _CallableT]:
         """The decorator used to wrap subcommand functions."""
         return self._subcommand(parent, name, args, allow_extra=False)
 
     def subcommand_with_extra(
-        self, parent: str, name: str, **args
+        self, parent: str, name: str, **args: Arg
     ) -> Callable[[_CallableT], _CallableT]:
         """
         The decorator used to wrap subcommand functions. Supports additional
