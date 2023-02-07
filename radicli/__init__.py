@@ -139,6 +139,7 @@ class Radicli:
                     shorthand=arg_info.short,
                     help=arg_info.help,
                     default=sig_defaults[param],
+                    count=arg_info.count,
                     skip_resolve=converter is not None,
                     get_converter=get_converter,
                 )

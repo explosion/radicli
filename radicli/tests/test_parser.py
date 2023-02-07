@@ -111,6 +111,17 @@ GOOD_TEST_CASES = [
         [get_arg("a", FoodEnum, name="--a")],
         {"a": FoodEnum.pizza},
     ),
+    # Counting
+    (
+        ["--verbose", "--verbose"],
+        [get_arg("verbose", int, name="--verbose", shorthand="-v", count=True)],
+        {"verbose": 2},
+    ),
+    (
+        ["-vvv"],
+        [get_arg("verbose", int, name="--verbose", shorthand="-v", count=True)],
+        {"verbose": 3},
+    ),
 ]
 
 EXTRA_KEY = "__extra__"

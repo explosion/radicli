@@ -55,6 +55,7 @@ class Arg:
     short: Optional[str] = None
     help: Optional[str] = None
     converter: Optional[Callable[[str], Any]] = None
+    count: bool = False
 
 
 @dataclass
@@ -104,6 +105,7 @@ def get_arg(
     shorthand: Optional[str] = None,
     help: Optional[str] = None,
     default: Optional[Any] = ...,
+    count: bool = False,
     get_converter: Optional[Callable[[Type], Optional[Callable[[str], Any]]]] = None,
     skip_resolve: bool = False,
 ) -> ArgparseArg:
@@ -117,6 +119,12 @@ def get_arg(
     )
     if default != ...:
         arg.default = default
+    if count:
+        arg.action = "count"
+        arg.type = None
+        if not arg.default:
+            arg.default = 0
+        return arg
     converter = get_converter(param_type) if get_converter else None
     if converter:
         arg.type = converter

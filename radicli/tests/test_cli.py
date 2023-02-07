@@ -172,6 +172,24 @@ def test_cli_enums():
     assert ran
 
 
+@pytest.mark.parametrize(
+    "args,count",
+    [(["--verbose", "--verbose"], 2), (["-VVVVV"], 5)],
+)
+def test_cli_count(args, count):
+    ran = False
+
+    with cli_context("test", args) as cli:
+
+        @cli.command("test", verbose=Arg("--verbose", "-V", count=True))
+        def test(verbose: int):
+            assert verbose == count
+            nonlocal ran
+            ran = True
+
+    assert ran
+
+
 def test_cli_converter():
     args = ["--a", "hello", "--b", "world"]
     converter = lambda x: x.upper()

@@ -201,12 +201,13 @@ Hello Alex! ['--age', '35', '--color', 'blue']
 
 Dataclass for describing argument meta information. This is typically used in the command decorators and only includes information for how the argument should be handled on the CLI. Argument types and defaults are read from the Python function.
 
-| Argument    | Type                             | Description                                                                                             |
-| ----------- | -------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| `option`    | `Optional[str]`                  | Option to use on the CLI, e.g. `--arg`. If unset, argument will be treated as positional.               |
-| `short`     | `Optional[str]`                  | Shorthand for option, e.g. `-A`.                                                                        |
-| `help`      | `Optional[str]`                  | Help text for argument, used for `--help`.                                                              |
-| `converter` | `Optional[Callable[[str], Any]]` | Converter function that takes the string from the CLI value and returns a value passed to the function. |
+| Argument    | Type                             | Description                                                                                                 |
+| ----------- | -------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `option`    | `Optional[str]`                  | Option to use on the CLI, e.g. `--arg`. If unset, argument will be treated as positional.                   |
+| `short`     | `Optional[str]`                  | Shorthand for option, e.g. `-A`.                                                                            |
+| `help`      | `Optional[str]`                  | Help text for argument, used for `--help`.                                                                  |
+| `count`     | `bool`                           | Only count and return number of times an argument is used, e.g. `--verbose` or `-vvv` (for shorthand `-v`). |
+| `converter` | `Optional[Callable[[str], Any]]` | Converter function that takes the string from the CLI value and returns a value passed to the function.     |
 
 ### <kbd>class</kbd> `Radicli`
 
