@@ -172,8 +172,7 @@ class Radicli:
         """
         run_args = args if args is not None else sys.argv
         if len(run_args) <= 1 or run_args[1] == self._help_arg:
-            commands = self.registry.get_all()
-            print(self._format_info(commands, self.subcommands))
+            print(self._format_info())
         else:
             command = run_args.pop(1)
             args = run_args[1:]
@@ -210,12 +209,11 @@ class Radicli:
         allow_extra: bool = False,
     ) -> Dict[str, Any]:
         """Parse a list of arguments. Can also be used for testing."""
-        has_help = any(arg.name == self._help_arg for arg in arg_info)
         p = ArgumentParser(
             prog=join_strings(self.prog, name),
             description=description,
             formatter_class=HelpFormatter,
-            add_help=not has_help,
+            add_help=not any(a.name == self._help_arg for a in arg_info),
         )
         self._add_args(p, arg_info)
         subparsers: Dict[str, Tuple[ArgumentParser, Command]] = {}
@@ -227,13 +225,12 @@ class Radicli:
                 parser_class=ArgumentParser,
             )
             for sub_name, sub_cmd in subcommands.items():
-                has_help = any(arg.name == self._help_arg for arg in sub_cmd.args)
                 subp = sp.add_parser(
                     sub_cmd.name,
                     description=sub_cmd.description,
                     help=sub_cmd.description,
                     prog=join_strings(self.prog, sub_cmd.parent, sub_name),
-                    add_help=not has_help,
+                    add_help=not any(a.name == self._help_arg for a in sub_cmd.args),
                 )
                 subparsers[sub_cmd.name] = (subp, sub_cmd)
                 self._add_args(subp, sub_cmd.args)
@@ -276,19 +273,18 @@ class Radicli:
             return values
         return values
 
-    def _format_info(
-        self, commands: Dict[str, Command], subcommands: Dict[str, catalogue.Registry]
-    ) -> str:
+    def _format_info(self) -> str:
         """Nicely format the available command overview and add subcommands."""
+        commands = self.registry.get_all()
         data = []
         for name, cmd in commands.items():
             data.append((f"  {name}", format_arg_help(cmd.description)))
-            if name in subcommands:
-                col = f"Subcommands: {', '.join(subcommands[name].get_all())}"
+            if name in self.subcommands:
+                col = f"Subcommands: {', '.join(self.subcommands[name].get_all())}"
                 data.append(("", col))
-        for name in subcommands:
+        for name in self.subcommands:
             if name not in commands:
-                col = f"Subcommands: {', '.join(subcommands[name].get_all())}"
+                col = f"Subcommands: {', '.join(self.subcommands[name].get_all())}"
                 data.append((f"  {name}", col))
         info = [self.help, "Available commands:", format_table(data)]
         return join_strings(*info, char="\n")
