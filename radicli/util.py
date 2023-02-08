@@ -84,10 +84,10 @@ class ArgparseArg:
             "action": self.action,
             "help": self.help,
         }
-        if self.default != ...:
+        if self.default is not ...:
             kwargs["default"] = self.default
         # Support defaults for positional arguments
-        if not self.name and self.default != ...:
+        if not self.name and self.default is not ...:
             kwargs["nargs"] = "?"
         # Not all arguments are valid for all options
         if self.type is not None:
@@ -117,7 +117,7 @@ def get_arg(
         help=help,
         type=param_type,
     )
-    if default != ...:
+    if default is not ...:
         arg.default = default
     if count:
         arg.action = "count"
