@@ -1,5 +1,4 @@
-from typing import Any, Callable, Iterable, Type, Union, Optional, Dict, Tuple
-from typing import List, Literal, TypeVar, get_origin, get_args
+from typing import Any, Callable, Iterable, Type, Union, Optional, Dict, Tuple, List, Literal, TypeVar, NewType, get_args, get_origin
 from enum import Enum
 from dataclasses import dataclass
 from pathlib import Path
@@ -261,17 +260,29 @@ def convert_path_or_dash(path_str: str) -> Union[Path, str]:
 
 
 # Custom path types for custom converters
-ExistingPath = TypeVar("ExistingPath", bound=Path)
-ExistingFilePath = TypeVar("ExistingFilePath", bound=Path)
-ExistingDirPath = TypeVar("ExistingDirPath", bound=Path)
-ExistingPathOrDash = TypeVar("ExistingPathOrDash", bound=Union[Path, Literal["-"]])
-ExistingFilePathOrDash = TypeVar(
-    "ExistingFilePathOrDash", bound=Union[Path, Literal["-"]]
-)
-ExistingDirPathOrDash = TypeVar(
-    "ExistingDirPathOrDash", bound=Union[Path, Literal["-"]]
-)
-PathOrDash = TypeVar("PathOrDash", bound=Union[Path, Literal["-"]])
+# ExistingPath = TypeVar("ExistingPath", bound=Path)
+# ExistingFilePath = TypeVar("ExistingFilePath", bound=Path)
+# ExistingDirPath = TypeVar("ExistingDirPath", bound=Path)
+# ExistingPathOrDash = TypeVar("ExistingPathOrDash", bound=Union[Path, Literal["-"]])
+# ExistingFilePathOrDash = TypeVar(
+#     "ExistingFilePathOrDash", bound=Union[Path, Literal["-"]]
+# )
+# ExistingDirPathOrDash = TypeVar(
+#     "ExistingDirPathOrDash", bound=Union[Path, Literal["-"]]
+# )
+# PathOrDash = TypeVar("PathOrDash", bound=Union[Path, Literal["-"]])
+
+
+# Custom path types for custom converters
+ExistingPath = NewType("ExistingPath", Path)
+ExistingFilePath = NewType("ExistingFilePath", Path)
+ExistingDirPath = NewType("ExistingDirPath", Path)
+
+ExistingPathOrDash = Union[ExistingPath, Literal["-"]]
+ExistingFilePathOrDash = Union[ExistingFilePath, Literal["-"]]
+ExistingDirPathOrDash = Union[ExistingFilePath, Literal["-"]]
+PathOrDash = Union[Path, Literal["-"]]
+
 
 DEFAULT_CONVERTERS: Dict[Type, Callable[[str], Any]] = {
     ExistingPath: convert_existing_path,
