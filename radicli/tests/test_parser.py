@@ -2,7 +2,7 @@ from typing import List, Iterable, Optional, Union, Literal, Dict, Any
 from enum import Enum
 import pytest
 import argparse
-from radicli import Radicli
+from radicli import Radicli, Arg
 from radicli.util import get_arg, UnsupportedTypeError, CliParserError
 
 
@@ -16,9 +16,9 @@ GOOD_TEST_CASES = [
     (
         ["--a", "1", "--b", "2", "--c", "2"],
         [
-            get_arg("a", str, name="--a"),
-            get_arg("b", int, name="--b"),
-            get_arg("c", float, name="--c"),
+            get_arg("a", Arg("--a"), str),
+            get_arg("b", Arg("--b"), int),
+            get_arg("c", Arg("--c"), float),
         ],
         {"a": "1", "b": 2, "c": 2.0},
     ),
@@ -26,57 +26,57 @@ GOOD_TEST_CASES = [
     (
         ["1", "2", "--c", "2"],
         [
-            get_arg("a", str),
-            get_arg("b", int),
-            get_arg("c", float, name="--c"),
+            get_arg("a", Arg(), str),
+            get_arg("b", Arg(), int),
+            get_arg("c", Arg("--c"), float),
         ],
         {"a": "1", "b": 2, "c": 2.0},
     ),
     # Booleans
-    (["--a"], [get_arg("a", bool, name="--a")], {"a": True}),
+    (["--a"], [get_arg("a", Arg("--a"), bool)], {"a": True}),
     (
         ["--a", "1", "--b", "--c", "3"],
         [
-            get_arg("a", str, name="--a"),
-            get_arg("b", bool, name="--b"),
-            get_arg("c", int, name="--c"),
-            get_arg("d", bool, name="--d"),
+            get_arg("a", Arg("--a"), str),
+            get_arg("b", Arg("--b"), bool),
+            get_arg("c", Arg("--c"), int),
+            get_arg("d", Arg("--d"), bool),
         ],
         {"a": "1", "b": True, "c": 3, "d": False},
     ),
     # List types and iterables
     (
         ["--a", "1", "--a", "2", "--a", "3"],
-        [get_arg("a", List[str], name="--a")],
+        [get_arg("a", Arg("--a"), List[str])],
         {"a": ["1", "2", "3"]},
     ),
     (
         ["--a", "1", "--a", "2", "--a", "3"],
-        [get_arg("a", List[int], name="--a")],
+        [get_arg("a", Arg("--a"), List[int])],
         {"a": [1, 2, 3]},
     ),
     (
         ["--a", "1", "--a", "2", "--a", "3"],
-        [get_arg("a", List[float], name="--a")],
+        [get_arg("a", Arg("--a"), List[float])],
         {"a": [1.0, 2.0, 3.0]},
     ),
     (
         ["--a", "1", "--a", "2", "--a", "3"],
-        [get_arg("a", Iterable[str], name="--a")],
+        [get_arg("a", Arg("--a"), Iterable[str])],
         {"a": ["1", "2", "3"]},
     ),
     (
         ["--a", "1", "--a", "2", "--a", "3"],
-        [get_arg("a", Optional[List[str]], name="--a")],
+        [get_arg("a", Arg("--a"), Optional[List[str]])],
         {"a": ["1", "2", "3"]},
     ),
     # Optional arguments
     (
         ["--a", "1", "--c", "3"],
         [
-            get_arg("a", Optional[str], name="--a"),
-            get_arg("b", Optional[int], name="--b"),
-            get_arg("c", Union[str, int], name="--c"),
+            get_arg("a", Arg("--a"), Optional[str]),
+            get_arg("b", Arg("--b"), Optional[int]),
+            get_arg("c", Arg("--c"), Union[str, int]),
         ],
         {"a": "1", "b": None, "c": "3"},
     ),
@@ -84,42 +84,42 @@ GOOD_TEST_CASES = [
     (
         ["-A", "1", "--b", "2", "-C", "2"],
         [
-            get_arg("a", str, name="--a", shorthand="-A"),
-            get_arg("b", int, name="--b", shorthand="-B"),
-            get_arg("c", float, name="--c", shorthand="-C"),
+            get_arg("a", Arg("--a", "-A"), str),
+            get_arg("b", Arg("--b", "-B"), int),
+            get_arg("c", Arg("--c", "-C"), float),
         ],
         {"a": "1", "b": 2, "c": 2.0},
     ),
     # Custom converter
     (
         ["--a", "hello world"],
-        [get_arg("a", lambda x: x.upper(), name="--a", skip_resolve=True)],
+        [get_arg("a", Arg("--a"), lambda x: x.upper(), skip_resolve=True)],
         {"a": "HELLO WORLD"},
     ),
     # Literals
     (
         ["--a", "pizza", "--b", "fanta"],
         [
-            get_arg("a", Literal["pizza", "pasta", "burger"], name="--a"),
-            get_arg("b", Literal["cola", "fanta", "sprite"], name="--b"),
+            get_arg("a", Arg("--a"), Literal["pizza", "pasta", "burger"]),
+            get_arg("b", Arg("--b"), Literal["cola", "fanta", "sprite"]),
         ],
         {"a": "pizza", "b": "fanta"},
     ),
     # Enums
     (
         ["--a", "pizza"],
-        [get_arg("a", FoodEnum, name="--a")],
+        [get_arg("a", Arg("--a"), FoodEnum)],
         {"a": FoodEnum.pizza},
     ),
     # Counting
     (
         ["--verbose", "--verbose"],
-        [get_arg("verbose", int, name="--verbose", shorthand="-v", count=True)],
+        [get_arg("verbose", Arg("--verbose", "-v", count=True), int)],
         {"verbose": 2},
     ),
     (
         ["-vvv"],
-        [get_arg("verbose", int, name="--verbose", shorthand="-v", count=True)],
+        [get_arg("verbose", Arg("--verbose", "-v", count=True), int)],
         {"verbose": 3},
     ),
 ]
@@ -128,10 +128,7 @@ EXTRA_KEY = "__extra__"
 GOOD_WITH_EXTRA_TEST_CASES = [
     (
         ["--a", "1", "--b", "2", "--hello", "3", "--world"],
-        [
-            get_arg("a", str, name="--a"),
-            get_arg("b", int, name="--b"),
-        ],
+        [get_arg("a", Arg("--a"), str), get_arg("b", Arg("--b"), int)],
         {"a": "1", "b": 2, EXTRA_KEY: ["--hello", "3", "--world"]},
     ),
 ]
@@ -140,40 +137,37 @@ BAD_TEST_CASES = [
     # Unsupported types
     (
         ["--a", "{'hello': 'world'}"],
-        [(("a", Dict[str, Any]), {"name": "--a"})],
+        [("a", Arg("--a"), Dict[str, Any])],
         UnsupportedTypeError,
     ),
     # Bad values
     (
         ["--a", "hello"],
-        [(("a", int), {"name": "--a"})],
+        [("a", Arg("--a"), int)],
         CliParserError,
     ),
     # Unrecognized, missing or duplicate arguments
-    (["--a", "1", "--b", "2"], [(("a", str), {"name": "--a"})], CliParserError),
-    (["--a", "1"], [(("a", str), {})], CliParserError),
-    (["--b", "1"], [(("a", str), {}), (("b", str), {"name": "--b"})], CliParserError),
+    (["--a", "1", "--b", "2"], [("a", Arg("--a"), str)], CliParserError),
+    (["--a", "1"], [("a", Arg(), str)], CliParserError),
+    (["--b", "1"], [("a", Arg(), str), ("b", Arg("--b"), str)], CliParserError),
     (
         ["--a", "1"],
-        [(("a", str), {"name": "--a"}), (("a", str), {"name": "--a"})],
+        [("a", Arg("--a"), str), ("a", Arg("--a"), str)],
         argparse.ArgumentError,
     ),
     (
         ["--a", "1", "--b", "2"],
-        [
-            (("a", str), {"name": "--a", "shorthand": "-A"}),
-            (("b", str), {"name": "--b", "shorthand": "-A"}),
-        ],
+        [("a", Arg("--a", "-A"), str), ("b", Arg("--b", "-A"), str)],
         argparse.ArgumentError,
     ),
     # Literals
     (
         ["--a", "fries"],
-        [(("a", Literal["pizza", "pasta", "burger"]), {"name": "--a"})],
+        [("a", Arg("--a"), Literal["pizza", "pasta", "burger"])],
         CliParserError,
     ),
     # Enums
-    (["--a", "fries"], [(("a", FoodEnum), {"name": "--a"})], CliParserError),
+    (["--a", "fries"], [("a", Arg("--a"), FoodEnum)], CliParserError),
 ]
 
 
@@ -196,11 +190,11 @@ def test_parser_good_with_extra(args, arg_info, expected):
 
 
 @pytest.mark.parametrize(
-    "args,arg_info_data,expected_error",
+    "args,get_arg_args,expected_error",
     BAD_TEST_CASES,
 )
-def test_parser_bad(args, arg_info_data, expected_error):
+def test_parser_bad(args, get_arg_args, expected_error):
     cli = Radicli()
     with pytest.raises(expected_error):
-        arg_info = [get_arg(*args, **kwargs) for args, kwargs in arg_info_data]
+        arg_info = [get_arg(*args) for args in get_arg_args]
         cli.parse(args, arg_info)

@@ -63,31 +63,27 @@ class ArgparseArg:
     """Internal argument dataclass defining values passed to argparse."""
 
     id: str
-    name: Optional[str] = None
-    shorthand: Optional[str] = None
+    arg: Arg
     type: Optional[Union[Type, Callable[[str], Any]]] = None
     default: Any = ...
+    # We modify the help to add types so we store it twice to store old and new
+    help: Optional[str] = None
     action: Optional[str] = None
     choices: Optional[Union[List[str], List[Enum]]] = None
-    help: Optional[str] = None
     has_converter: bool = False
 
     def to_argparse(self) -> Tuple[List[str], Dict[str, Any]]:
         """Helper method to generate args and kwargs for Parser.add_argument."""
         args = []
-        if self.name:
-            args.append(self.name)
-        if self.shorthand:
-            args.append(self.shorthand)
-        kwargs = {
-            "dest": self.id,
-            "action": self.action,
-            "help": self.help,
-        }
+        if self.arg.option:
+            args.append(self.arg.option)
+        if self.arg.short:
+            args.append(self.arg.short)
+        kwargs = {"dest": self.id, "action": self.action, "help": self.help}
         if self.default != ...:
             kwargs["default"] = self.default
         # Support defaults for positional arguments
-        if not self.name and self.default != ...:
+        if not self.arg.option and self.default != ...:
             kwargs["nargs"] = "?"
         # Not all arguments are valid for all options
         if self.type is not None:
@@ -99,27 +95,18 @@ class ArgparseArg:
 
 def get_arg(
     param: str,
+    orig_arg: Arg,
     param_type: Any,
     *,
-    name: Optional[str] = None,
-    shorthand: Optional[str] = None,
-    help: Optional[str] = None,
     default: Optional[Any] = ...,
-    count: bool = False,
     get_converter: Optional[Callable[[Type], Optional[Callable[[str], Any]]]] = None,
     skip_resolve: bool = False,
 ) -> ArgparseArg:
     """Generate an argument to add to argparse and interpret types if possible."""
-    arg = ArgparseArg(
-        id=param,
-        name=name,
-        shorthand=shorthand,
-        help=help,
-        type=param_type,
-    )
+    arg = ArgparseArg(id=param, arg=orig_arg, type=param_type, help=orig_arg.help)
     if default != ...:
         arg.default = default
-    if count:
+    if orig_arg.count:
         arg.action = "count"
         arg.type = None
         if not arg.default:
@@ -141,9 +128,8 @@ def get_arg(
         if arg_types:
             return get_arg(
                 param,
+                orig_arg,
                 arg_types[0],
-                name=name,
-                help=help,
                 default=default,
                 get_converter=get_converter,
             )
@@ -151,7 +137,7 @@ def get_arg(
         arg.type = param_type
         return arg
     if param_type == bool:
-        if not name:
+        if not orig_arg.option:
             raise InvalidArgumentError(
                 arg.id,
                 f"boolean arguments need to be flags, e.g. --{arg.id.replace('_', '-')}",

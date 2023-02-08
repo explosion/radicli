@@ -26,6 +26,10 @@ class Command:
     allow_extra: bool = False
     parent: Optional[str] = None
 
+    @property
+    def display_name(self) -> str:
+        return f"{self.parent} {self.name}" if self.parent else self.name
+
 
 class Radicli:
     prog: Optional[str]
@@ -127,21 +131,18 @@ class Radicli:
                     args[param_name] = Arg()
             cli_args = []
             for param, arg_info in args.items():
-                param_type = sig_types[param]
 
-                def get_converter(arg_type: Type) -> Optional[Callable]:
+                def get_converter(arg_type: Type) -> Optional[Callable[[str], Any]]:
                     return self.converters.get(arg_type, arg_info.converter)
 
+                param_type = sig_types[param]
                 converter = get_converter(param_type)
                 arg_type = converter or param_type
                 arg = get_arg(
                     param,
+                    arg_info,
                     arg_type,
-                    name=arg_info.option,
-                    shorthand=arg_info.short,
-                    help=arg_info.help,
                     default=sig_defaults[param],
-                    count=arg_info.count,
                     skip_resolve=converter is not None,
                     get_converter=get_converter,
                 )
@@ -208,7 +209,7 @@ class Radicli:
             prog=join_strings(self.prog, name),
             description=description,
             formatter_class=HelpFormatter,
-            add_help=not any(a.name == self._help_arg for a in arg_info),
+            add_help=not any(a.arg.option == self._help_arg for a in arg_info),
         )
         self._add_args(p, arg_info)
         subparsers: Dict[str, Tuple[ArgumentParser, Command]] = {}
@@ -220,12 +221,13 @@ class Radicli:
                 parser_class=ArgumentParser,
             )
             for sub_name, sub_cmd in subcommands.items():
+                add_help = not any(a.arg.option == self._help_arg for a in sub_cmd.args)
                 subp = sp.add_parser(
                     sub_cmd.name,
                     description=sub_cmd.description,
                     help=sub_cmd.description,
                     prog=join_strings(self.prog, sub_cmd.parent, sub_name),
-                    add_help=not any(a.name == self._help_arg for a in sub_cmd.args),
+                    add_help=add_help,
                 )
                 subparsers[sub_cmd.name] = (subp, sub_cmd)
                 self._add_args(subp, sub_cmd.args)

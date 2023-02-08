@@ -213,14 +213,15 @@ Dataclass for describing argument meta information. This is typically used in th
 
 Internal representation of a CLI command. Can be accessed via `Radicli.commands` and `Radicli.subcommands`.
 
-| Name          | Type                | Description                                                 |
-| ------------- | ------------------- | ----------------------------------------------------------- |
-| `name`        | `str`               | The name of the command.                                    |
-| `func`        | `Callable`          | The decorated command function.                             |
-| `args`        | `List[ArgparseArg]` | The internal representation of the argument annotations.    |
-| `description` | `Optional[str]`     | The command description, taken from the function docstring. |
-| `allow_extra` | `bool`              | Whether to allow extra arguments.                           |
-| `parent`      | `Optional[str]`     | Name of the parent command if command is a subcommand.      |
+| Name           | Type                | Description                                                                                                 |
+| -------------- | ------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `name`         | `str`               | The name of the command.                                                                                    |
+| `func`         | `Callable`          | The decorated command function.                                                                             |
+| `args`         | `List[ArgparseArg]` | The internal representation of the argument annotations. `Argparse.arg` lets you access the original `Arg`. |
+| `description`  | `Optional[str]`     | The command description, taken from the function docstring.                                                 |
+| `allow_extra`  | `bool`              | Whether to allow extra arguments.                                                                           |
+| `parent`       | `Optional[str]`     | Name of the parent command if command is a subcommand.                                                      |
+| `display_name` | `str`               | The display name including the parent if available, e.g. `parent child`.                                    |
 
 ### <kbd>class</kbd> `Radicli`
 
