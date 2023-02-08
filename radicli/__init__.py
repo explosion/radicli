@@ -242,6 +242,7 @@ class Radicli:
         if not sub_key:  # we're not in a subcommand
             values = self._handle_extra(p, values, allow_extra)
             return values
+        assert isinstance(sub_key, str)
         if sub_key not in subparsers:
             raise CliParserError(f"invalid subcommand: '{sub_key}'")
         subparser, subcmd = subparsers[sub_key]
