@@ -260,20 +260,6 @@ def convert_path_or_dash(path_str: str) -> Union[Path, str]:
 
 
 # Custom path types for custom converters
-# ExistingPath = TypeVar("ExistingPath", bound=Path)
-# ExistingFilePath = TypeVar("ExistingFilePath", bound=Path)
-# ExistingDirPath = TypeVar("ExistingDirPath", bound=Path)
-# ExistingPathOrDash = TypeVar("ExistingPathOrDash", bound=Union[Path, Literal["-"]])
-# ExistingFilePathOrDash = TypeVar(
-#     "ExistingFilePathOrDash", bound=Union[Path, Literal["-"]]
-# )
-# ExistingDirPathOrDash = TypeVar(
-#     "ExistingDirPathOrDash", bound=Union[Path, Literal["-"]]
-# )
-# PathOrDash = TypeVar("PathOrDash", bound=Union[Path, Literal["-"]])
-
-
-# Custom path types for custom converters
 ExistingPath = NewType("ExistingPath", Path)
 ExistingFilePath = NewType("ExistingFilePath", Path)
 ExistingDirPath = NewType("ExistingDirPath", Path)
