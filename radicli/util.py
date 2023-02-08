@@ -39,6 +39,13 @@ class CommandNotFoundError(Exception):
         super().__init__(self.message)
 
 
+class CommandExistsError(Exception):
+    def __init__(self, name: str) -> None:
+        self.name = name
+        self.message = f"Command '{self.name}' already exists"
+        super().__init__(self.message)
+
+
 class InvalidArgumentError(Exception):
     def __init__(self, arg_id: str, message: str):
         self.id = arg_id

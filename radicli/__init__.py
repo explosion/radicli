@@ -6,7 +6,7 @@ from inspect import signature
 from .parser import ArgumentParser, HelpFormatter
 from .util import Arg, ArgparseArg, get_arg, join_strings, format_type, format_table
 from .util import format_arg_help, SimpleFrozenDict, CommandNotFoundError
-from .util import CliParserError, DEFAULT_CONVERTERS
+from .util import CliParserError, CommandExistsError, DEFAULT_CONVERTERS
 
 # Make available for import
 from .util import ExistingPath, ExistingFilePath, ExistingDirPath  # noqa: F401
@@ -113,7 +113,7 @@ class Radicli:
 
         def cli_wrapper(cli_func: _CallableT) -> _CallableT:
             if name in registry:
-                raise CliParserError(f"command already exists: {name}")
+                raise CommandExistsError(name)
             sig = signature(cli_func)
             sig_types = {}
             sig_defaults = {}
