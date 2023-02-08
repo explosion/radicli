@@ -335,6 +335,24 @@ Hello world, Alex! ['--color', 'blue']
 | `**args`    | `Arg`      | Keyword arguments defining the argument information. Names need to match the function arguments. |
 | **RETURNS** | `Callable` | The wrapped function.                                                                            |
 
+#### <kbd>method</kbd> `Radicli.placeholder`
+
+Add empty parent command with custom description text for subcommands without
+an executable parent.
+
+```python
+cli.placeholder("parent", description="This is the top-level command description")
+
+@cli.subcommand("parent", "child", name=Arg("--name", help="Your name"))
+def child(name: str) -> None:
+    print(f"Hello {name}!")
+```
+
+| Argument      | Type            | Description                         |
+| ------------- | --------------- | ----------------------------------- |
+| `name`        | `str`           | Name of the command.                |
+| `description` | `Optional[str]` | Command description for help texts. |
+
 #### <kbd>method</kbd> `Radicli.run`
 
 Run the CLI. Typically called in a `if __name__ == "__main__":` block at the end of a file or in a package's `__main__.py` to allow executing the CLI via `python -m [package]`.
