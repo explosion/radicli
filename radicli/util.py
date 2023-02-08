@@ -74,12 +74,12 @@ class ArgparseArg:
 
     def to_argparse(self) -> Tuple[List[str], Dict[str, Any]]:
         """Helper method to generate args and kwargs for Parser.add_argument."""
-        args = []
+        args: List[str] = []
         if self.name:
             args.append(self.name)
         if self.shorthand:
             args.append(self.shorthand)
-        kwargs = {
+        kwargs: Dict[str, Any] = {
             "dest": self.id,
             "action": self.action,
             "help": self.help,
