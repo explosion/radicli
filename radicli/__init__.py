@@ -112,6 +112,8 @@ class Radicli:
         """The decorator used to wrap command functions."""
 
         def cli_wrapper(cli_func: _CallableT) -> _CallableT:
+            if name in registry:
+                raise CliParserError(f"command already exists: {name}")
             sig = signature(cli_func)
             sig_types = {}
             sig_defaults = {}
@@ -131,6 +133,8 @@ class Radicli:
                     args[param_name] = Arg()
             cli_args = []
             for param, arg_info in args.items():
+                if param not in sig_types:  # unknown argument
+                    raise CliParserError(f"argument not found in function: {param}")
 
                 def get_converter(arg_type: Type) -> Optional[Callable[[str], Any]]:
                     return self.converters.get(arg_type, arg_info.converter)
