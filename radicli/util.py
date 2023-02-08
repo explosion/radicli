@@ -273,7 +273,7 @@ ExistingDirPathOrDash = TypeVar(
 )
 PathOrDash = TypeVar("PathOrDash", bound=Union[Path, Literal["-"]])
 
-DEFAULT_CONVERTERS: Dict[Union[Type, str], Callable[[str], Any]] = {
+DEFAULT_CONVERTERS: Dict[Type, Callable[[str], Any]] = {
     ExistingPath: convert_existing_path,
     ExistingFilePath: convert_existing_file_path,
     ExistingDirPath: convert_existing_dir_path,
