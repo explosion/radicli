@@ -1,4 +1,4 @@
-from typing import Any, NoReturn
+from typing import Any
 import argparse
 import sys
 
