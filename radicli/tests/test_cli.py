@@ -22,7 +22,7 @@ def make_tempdir() -> Iterator[Path]:
 
 
 def test_cli_sys_argv():
-    cli = Radicli("test")
+    cli = Radicli()
     ran = False
 
     @cli.command("test")
@@ -39,7 +39,7 @@ def test_cli_sys_argv():
 
 
 def test_cli_no_annots():
-    cli = Radicli("test")
+    cli = Radicli()
     ran = False
 
     @cli.command("test")
@@ -55,7 +55,7 @@ def test_cli_no_annots():
 
 
 def test_cli_mix():
-    cli = Radicli("test")
+    cli = Radicli()
     ran = False
 
     @cli.command(
@@ -84,7 +84,7 @@ def test_cli_mix():
 
 
 def test_cli_lists():
-    cli = Radicli("test")
+    cli = Radicli()
     ran = False
 
     @cli.command("test", a=Arg("--a"), b=Arg("--b"), c=Arg("--c"))
@@ -100,7 +100,7 @@ def test_cli_lists():
 
 
 def test_cli_different_dest():
-    cli = Radicli("test")
+    cli = Radicli()
     ran = False
 
     @cli.command("test", first=Arg("--a"), second=Arg("--b"))
@@ -115,7 +115,7 @@ def test_cli_different_dest():
 
 
 def test_cli_defaults():
-    cli = Radicli("test")
+    cli = Radicli()
     ran = False
 
     @cli.command("test", a=Arg(), b=Arg(), c=Arg("--c"), d=Arg("--d"))
@@ -132,7 +132,7 @@ def test_cli_defaults():
 
 
 def test_cli_literals():
-    cli = Radicli("test")
+    cli = Radicli()
     ran = False
 
     @cli.command("test", a=Arg("--a"), b=Arg("--b"))
@@ -147,7 +147,7 @@ def test_cli_literals():
 
 
 def test_cli_literals_list():
-    cli = Radicli("test")
+    cli = Radicli()
     ran = False
 
     @cli.command("test", a=Arg("--a"))
@@ -164,7 +164,7 @@ def test_cli_literals_list():
 
 
 def test_cli_enums():
-    cli = Radicli("test")
+    cli = Radicli()
     ran = False
 
     class FoodEnum(Enum):
@@ -193,7 +193,7 @@ def test_cli_enums():
     [(["--verbose", "--verbose"], 2), (["-VVVVV"], 5)],
 )
 def test_cli_count(args, count):
-    cli = Radicli("test")
+    cli = Radicli()
     ran = False
 
     @cli.command("test", verbose=Arg("--verbose", "-V", count=True))
@@ -207,7 +207,7 @@ def test_cli_count(args, count):
 
 
 def test_cli_converter():
-    cli = Radicli("test")
+    cli = Radicli()
     converter = lambda x: x.upper()
     ran = False
 
@@ -225,7 +225,7 @@ def test_cli_converter():
 def test_cli_invalid_converter():
     """Test that errors in converters aren't masked by argparse."""
     # Previously: argument --a: invalid converter value: 'hello'
-    cli = Radicli("test")
+    cli = Radicli()
     error_msg = "This is an error!"
 
     def converter(value):
@@ -261,7 +261,7 @@ def test_cli_global_converters():
         CustomType: convert_custom_type,
     }
 
-    cli = Radicli("test", converters=converters)
+    cli = Radicli(converters=converters)
     ran = False
 
     @cli.command("test", a=Arg("--a"), b=Arg("--b"), c=Arg("--c"))
@@ -280,7 +280,7 @@ def test_cli_global_converters():
 
 
 def test_cli_with_extra():
-    cli = Radicli("test")
+    cli = Radicli()
     ran = False
 
     @cli.command_with_extra("test", a=Arg("--a"), b=Arg("--b"))
@@ -296,7 +296,7 @@ def test_cli_with_extra():
 
 
 def test_cli_with_extra_custom_key():
-    cli = Radicli("test", extra_key="additional")
+    cli = Radicli(extra_key="additional")
     ran = False
 
     @cli.command_with_extra("test", a=Arg("--a"), b=Arg("--b"))
@@ -312,7 +312,7 @@ def test_cli_with_extra_custom_key():
 
 
 def test_cli_subcommands():
-    cli = Radicli("test")
+    cli = Radicli()
     ran_parent = False
     ran_child1 = False
     ran_child2 = False
@@ -361,7 +361,7 @@ def test_cli_subcommands_parent_extra():
     # Known limitation: extra arguments on parents with subcommands need to
     # be prefixed by - or --, otherwise they'll be falsely interpreted as a
     # subcommand.
-    cli = Radicli("test")
+    cli = Radicli()
     ran_parent = False
     ran_child = False
 
@@ -387,7 +387,7 @@ def test_cli_subcommands_parent_extra():
 
 
 def test_cli_subcommands_child_extra():
-    cli = Radicli("test")
+    cli = Radicli()
     ran_parent = False
     ran_child = False
 
@@ -413,7 +413,7 @@ def test_cli_subcommands_child_extra():
 
 
 def test_cli_subcommands_no_parent():
-    cli = Radicli("test")
+    cli = Radicli()
     ran_child1 = False
     ran_child2 = False
 
@@ -439,7 +439,7 @@ def test_cli_subcommands_no_parent():
 
 
 def test_cli_path_converters():
-    cli = Radicli("test")
+    cli = Radicli()
     dir_name = "my_dir"
     file_name = "my_file.txt"
     ran = False
@@ -475,7 +475,7 @@ def test_cli_path_converters():
 
 
 def test_cli_path_or_dash():
-    cli = Radicli("test")
+    cli = Radicli()
     file_name = "my_file.txt"
     ran1 = False
     ran2 = False
@@ -508,7 +508,7 @@ def test_cli_path_or_dash():
 
 
 def test_cli_stack_decorators():
-    cli = Radicli("test")
+    cli = Radicli()
     ran = 0
 
     @cli.command("one", a=Arg("--a"), b=Arg("--b"))
@@ -530,7 +530,7 @@ def test_cli_stack_decorators():
 
 
 def test_cli_custom_help_arg():
-    cli = Radicli("test")
+    cli = Radicli()
     ran = False
 
     @cli.command("test", a=Arg("--a"), show_help=Arg("--help"))
