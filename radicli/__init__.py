@@ -228,6 +228,7 @@ class Radicli:
                     help=sub_cmd.description,
                     prog=join_strings(self.prog, sub_cmd.parent, sub_name),
                     add_help=add_help,
+                    formatter_class=HelpFormatter,
                 )
                 subparsers[sub_cmd.name] = (subp, sub_cmd)
                 self._add_args(subp, sub_cmd.args)
