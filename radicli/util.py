@@ -1,4 +1,5 @@
-from typing import Any, Callable, Iterable, Type, Union, Optional, Dict, Tuple, List, Literal, TypeVar, NewType, get_args, get_origin
+from typing import Any, Callable, Iterable, Type, Union, Optional, Dict, Tuple
+from typing import List, Literal, NewType, get_args, get_origin
 from enum import Enum
 from dataclasses import dataclass
 from pathlib import Path
@@ -184,8 +185,8 @@ def find_base_type(
 def format_type(arg_type: Any) -> str:
     """Get a pretty-printed string for a type."""
     # Nicer formatting for our own TypeVars
-    if isinstance(arg_type, TypeVar) and arg_type.__bound__:
-        return f"{arg_type.__name__} ({format_type(arg_type.__bound__)})"
+    if isinstance(arg_type, type(NewType)) and arg_type.__supertype__:  # type: ignore
+        return f"{arg_type.__name__} ({format_type(arg_type.__supertype__)})"  # type: ignore
     if hasattr(arg_type, "__name__"):
         return arg_type.__name__
     type_str = str(arg_type)
