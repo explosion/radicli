@@ -237,8 +237,8 @@ Internal representation of a CLI command. Can be accessed via `Radicli.commands`
 
 | Name          | Type                               | Description                                                                            |
 | ------------- | ---------------------------------- | -------------------------------------------------------------------------------------- |
-| `prog`        | str                                | Program name displayed in `--help` propmt usage examples, e.g. `"python -m spacy"`.    |
-| `help`        | str                                | Help text for the CLI, displayed in top-level `--help`.                                |
+| `prog`        | `str`                              | Program name displayed in `--help` propmt usage examples, e.g. `"python -m spacy"`.    |
+| `help`        | `str`                              | Help text for the CLI, displayed in top-level `--help`.                                |
 | `converters`  | `Dict[Type, Callable[[str], Any]]` | Dict mapping types to global converter functions.                                      |
 | `commands`    | `Dict[str, Command]`               | The commands added to the CLI, keyed by name.                                          |
 | `subcommands` | `Dict[str, Dict[str, Command]]`    | The subcommands added to the CLI, keyed by parent name, then keyed by subcommand name. |
