@@ -280,7 +280,7 @@ ExistingDirPath = NewType("ExistingDirPath", Path)
 
 ExistingPathOrDash = Union[ExistingPath, Literal["-"]]
 ExistingFilePathOrDash = Union[ExistingFilePath, Literal["-"]]
-ExistingDirPathOrDash = Union[ExistingFilePath, Literal["-"]]
+ExistingDirPathOrDash = Union[ExistingDirPath, Literal["-"]]
 PathOrDash = Union[Path, Literal["-"]]
 
 
