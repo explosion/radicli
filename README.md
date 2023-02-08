@@ -6,7 +6,7 @@
 
 > **Important note:** This package aims to be a simple option based on the requirements of our libraries. If you're looking for a more full-featured CLI toolkit, check out [`typer`](https://typer.tiangolo.com), [`click`](https://click.palletsprojects.com) or [`plac`](https://plac.readthedocs.io/en/latest/).
 
-[![GitHub Actions](https://github.com/explosion/radicli/actions/workflows/test/badge.svg)](https://github.com/explosion/radicli/actions/workflows/test.yml)
+[![GitHub Actions](https://github.com/explosion/radicli/actions/workflows/test.yml/badge.svg)](https://github.com/explosion/radicli/actions/workflows/test.yml)
 [![Current Release Version](https://img.shields.io/github/v/release/explosion/radicli.svg?style=flat-square&include_prereleases&logo=github)](https://github.com/explosion/radicli/releases)
 [![pypi Version](https://img.shields.io/pypi/v/radicli.svg?style=flat-square&logo=pypi&logoColor=white)](https://pypi.org/project/radicli/)
 
