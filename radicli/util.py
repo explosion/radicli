@@ -80,10 +80,10 @@ class ArgparseArg:
         if self.arg.short:
             args.append(self.arg.short)
         kwargs = {"dest": self.id, "action": self.action, "help": self.help}
-        if self.default != ...:
+        if self.default is not ...:
             kwargs["default"] = self.default
         # Support defaults for positional arguments
-        if not self.arg.option and self.default != ...:
+        if not self.arg.option and self.default is not ...:
             kwargs["nargs"] = "?"
         # Not all arguments are valid for all options
         if self.type is not None:
@@ -104,7 +104,7 @@ def get_arg(
 ) -> ArgparseArg:
     """Generate an argument to add to argparse and interpret types if possible."""
     arg = ArgparseArg(id=param, arg=orig_arg, type=param_type, help=orig_arg.help)
-    if default != ...:
+    if default is not ...:
         arg.default = default
     if orig_arg.count:
         arg.action = "count"
@@ -300,5 +300,5 @@ class SimpleFrozenDict(dict):
     def pop(self, key: Any, default=None):
         raise NotImplementedError(self.error)
 
-    def update(self, other):
+    def update(self, other, **kwargs):
         raise NotImplementedError(self.error)
