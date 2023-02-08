@@ -9,7 +9,7 @@ on:
 
 jobs:
   test:
-      uses: .github/workflows/test.yml
+      uses: ./.github/workflows/test.yml
   build-publish:
     name: Build and publish
     runs-on: ubuntu-latest
