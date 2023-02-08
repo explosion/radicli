@@ -9,9 +9,11 @@ on:
 
 jobs:
   test:
+      name: Run all tests
       uses: ./.github/workflows/test.yml
   build-publish:
     name: Build and publish
+    needs: test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout ${{ github.head_ref || github.ref_name }}
