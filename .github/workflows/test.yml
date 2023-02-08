@@ -23,9 +23,11 @@ jobs:
         run: python -m pyright radicli
       - name: Build sdist
         run: python setup.py sdist
-      - name: Clean and install from sdist
-        run: |
-          rm -rf radicli
-          pip install dist/*.tar.gz
+      - name: Remove package directory
+        uses: JesseTG/rm@v1.0.3
+        with:
+          path: radicli
+      - name: Install from sdist
+        run: pip install dist/*.tar.gz
       - name: Run pytest
         run: python -m pytest --pyargs radicli
