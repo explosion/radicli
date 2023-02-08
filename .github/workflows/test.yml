@@ -29,5 +29,6 @@ jobs:
           path: radicli
       - name: Install from sdist
         run: pip install dist/*.tar.gz
+        shell: bash
       - name: Run pytest
         run: python -m pytest --pyargs radicli
