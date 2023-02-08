@@ -2,7 +2,6 @@ from typing import Any, Callable, Dict, List, Optional, Type, TypeVar, Tuple
 import sys
 from dataclasses import dataclass
 from inspect import signature
-import catalogue
 
 from .parser import ArgumentParser, HelpFormatter
 from .util import Arg, ArgparseArg, get_arg, join_strings, format_type, format_table
@@ -29,32 +28,30 @@ class Command:
 
 
 class Radicli:
-    name: str
     prog: Optional[str]
     help: Optional[str]
     converters: Dict[Type, Callable[[str], Any]]
     extra_key: str
-    registry: catalogue.Registry
-    subcommands: Dict[str, catalogue.Registry]
+    commands: Dict[str, Command]
+    subcommands: Dict[str, Dict[str, Command]]
     _subcommand_key: str
     _help_arg: str
 
     def __init__(
         self,
-        name: str,
+        *,
         prog: Optional[str] = None,
         help: Optional[str] = None,
         converters: Dict[Type, Callable[[str], Any]] = SimpleFrozenDict(),
         extra_key: str = "_extra",
     ) -> None:
         """Initialize the CLI and create the registry."""
-        self.name = name
         self.prog = prog
         self.help = help
         self.converters = dict(DEFAULT_CONVERTERS)  # make sure to copy
         self.converters.update(converters)
         self.extra_key = extra_key
-        self.registry = catalogue.create(self.name, "commands")
+        self.commands = {}
         self.subcommands = {}
         self._subcommand_key = "__subcommand__"  # should not conflict with arg name!
         self._help_arg = "--help"
@@ -63,7 +60,7 @@ class Radicli:
     # define arguments called "name" that are passed in via **args
     def command(self, _name: str, **args: Arg) -> Callable[[_CallableT], _CallableT]:
         """The decorator used to wrap command functions."""
-        return self._command(_name, args, self.registry, allow_extra=False)
+        return self._command(_name, args, self.commands, allow_extra=False)
 
     def command_with_extra(
         self, _name: str, **args: Arg
@@ -72,7 +69,7 @@ class Radicli:
         The decorator used to wrap command functions. Supports additional
         arguments passed in as the keyword arg self.extra_key as a list.
         """
-        return self._command(_name, args, self.registry, allow_extra=True)
+        return self._command(_name, args, self.commands, allow_extra=True)
 
     def subcommand(
         self, _parent: str, _name: str, **args: Arg
@@ -94,7 +91,7 @@ class Radicli:
     ) -> Callable[[_CallableT], _CallableT]:
         """The decorator used to wrap subcommands."""
         if parent not in self.subcommands:
-            self.subcommands[parent] = catalogue.create(self.name, parent, name)
+            self.subcommands[parent] = {}
         return self._command(
             name, args, self.subcommands[parent], parent=parent, allow_extra=allow_extra
         )
@@ -103,7 +100,7 @@ class Radicli:
         self,
         name: str,
         args: Dict[str, Any],
-        registry: catalogue.Registry,
+        registry: Dict[str, Command],
         *,
         allow_extra: bool = False,
         parent: Optional[str] = None,
@@ -160,7 +157,7 @@ class Radicli:
                 allow_extra=allow_extra,
                 parent=parent,
             )
-            registry.register(name, func=cmd)
+            registry[name] = cmd
             return cli_func
 
         return cli_wrapper
@@ -176,16 +173,14 @@ class Radicli:
         else:
             command = run_args.pop(1)
             args = run_args[1:]
-            subcommands = {}
-            if command in self.subcommands:
-                subcommands = self.subcommands[command].get_all()
-            if command not in self.registry:
+            subcommands = self.subcommands.get(command, {})
+            if command not in self.commands:
                 if not subcommands:
-                    raise CommandNotFoundError(command, list(self.registry.get_all()))
+                    raise CommandNotFoundError(command, list(self.commands))
                 # Add a dummy parent to support subcommands without parents
                 dummy = Command(name=command, func=lambda *x, **y: None, args=[])
-                self.registry.register(command, func=dummy)
-            cmd = self.registry.get(command)
+                self.commands[command] = dummy
+            cmd = self.commands[command]
             values = self.parse(
                 args,
                 cmd.args,
@@ -275,16 +270,15 @@ class Radicli:
 
     def _format_info(self) -> str:
         """Nicely format the available command overview and add subcommands."""
-        commands = self.registry.get_all()
         data = []
-        for name, cmd in commands.items():
+        for name, cmd in self.commands.items():
             data.append((f"  {name}", format_arg_help(cmd.description)))
             if name in self.subcommands:
-                col = f"Subcommands: {', '.join(self.subcommands[name].get_all())}"
+                col = f"Subcommands: {', '.join(self.subcommands[name])}"
                 data.append(("", col))
         for name in self.subcommands:
-            if name not in commands:
-                col = f"Subcommands: {', '.join(self.subcommands[name].get_all())}"
+            if name not in self.commands:
+                col = f"Subcommands: {', '.join(self.subcommands[name])}"
                 data.append((f"  {name}", col))
         info = [self.help, "Available commands:", format_table(data)]
         return join_strings(*info, char="\n")

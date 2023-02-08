@@ -182,7 +182,7 @@ BAD_TEST_CASES = [
     GOOD_TEST_CASES,
 )
 def test_parser_good(args, arg_info, expected):
-    cli = Radicli("test")
+    cli = Radicli()
     assert cli.parse(args, arg_info) == expected
 
 
@@ -191,7 +191,7 @@ def test_parser_good(args, arg_info, expected):
     GOOD_WITH_EXTRA_TEST_CASES,
 )
 def test_parser_good_with_extra(args, arg_info, expected):
-    cli = Radicli("test", extra_key=EXTRA_KEY)
+    cli = Radicli(extra_key=EXTRA_KEY)
     assert cli.parse(args, arg_info, allow_extra=True) == expected
 
 
@@ -200,7 +200,7 @@ def test_parser_good_with_extra(args, arg_info, expected):
     BAD_TEST_CASES,
 )
 def test_parser_bad(args, arg_info_data, expected_error):
-    cli = Radicli("test")
+    cli = Radicli()
     with pytest.raises(expected_error):
         arg_info = [get_arg(*args, **kwargs) for args, kwargs in arg_info_data]
         cli.parse(args, arg_info)
