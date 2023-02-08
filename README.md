@@ -2,9 +2,9 @@
 
 # radicli: Radically lightweight command-line interfaces
 
-`radicli` is a small and very lightweight Python package for creating command line interfaces, built on top of Python's [`argparse`](https://docs.python.org/3/library/argparse.html) module. It introduces minimal overhead, preserves your original Python functions and uses type hints to parse values provided on the CLI. It supports all common types out-of-the-box, including complex ones like `List[str]`, `Literal` and `Enum`, and allows registering custom types with custom converters.
+`radicli` is a small, zero-dependency Python package for creating command line interfaces, built on top of Python's [`argparse`](https://docs.python.org/3/library/argparse.html) module. It introduces minimal overhead, preserves your original Python functions and uses type hints to parse values provided on the CLI. It supports all common types out-of-the-box, including complex ones like `List[str]`, `Literal` and `Enum`, and allows registering custom types with custom converters.
 
-> **Important note:** This package aims to be simple and minimum-dependency option based on the requirements of our libraries. If you're looking for a more full-featured CLI toolkit, check out [`typer`](https://typer.tiangolo.com), [`click`](https://click.palletsprojects.com) or [`plac`](https://plac.readthedocs.io/en/latest/).
+> **Important note:** This package aims to be simple option based on the requirements of our libraries. If you're looking for a more full-featured CLI toolkit, check out [`typer`](https://typer.tiangolo.com), [`click`](https://click.palletsprojects.com) or [`plac`](https://plac.readthedocs.io/en/latest/).
 
 [![GitHub Actions](https://github.com/explosion/radicli/actions/workflows/test/badge.svg)](https://github.com/explosion/radicli/actions/workflows/test.yml)
 [![Current Release Version](https://img.shields.io/github/v/release/explosion/radicli.svg?style=flat-square&include_prereleases&logo=github)](https://github.com/explosion/radicli/releases)
@@ -26,7 +26,7 @@ The `Radicli` class sets up the CLI and provides decorators for commands and sub
 # cli.py
 from radicli import Radicli, Arg
 
-cli = Radicli("my_cool_cli")
+cli = Radicli()
 
 @cli.command(
     "hello",
@@ -146,7 +146,7 @@ def load_spacy_model(name: str) -> spacy.language.Language:
     return spacy.load(name)
 
 converters = {spacy.language.Language: load_spacy_model}
-cli = Radicli("nlp", converters=converters)
+cli = Radicli(converters=converters)
 
 @cli.command(
     "process",
@@ -209,7 +209,30 @@ Dataclass for describing argument meta information. This is typically used in th
 | `count`     | `bool`                           | Only count and return number of times an argument is used, e.g. `--verbose` or `-vvv` (for shorthand `-v`). |
 | `converter` | `Optional[Callable[[str], Any]]` | Converter function that takes the string from the CLI value and returns a value passed to the function.     |
 
+### <kbd>dataclass</kbd> `Command`
+
+Internal representation of a CLI command. Can be accessed via `Radicli.commands` and `Radicli.subcommands`.
+
+| Name          | Type                | Description                                                 |
+| ------------- | ------------------- | ----------------------------------------------------------- |
+| `name`        | `str`               | The name of the command.                                    |
+| `func`        | `Callable`          | The decorated command function.                             |
+| `args`        | `List[ArgparseArg]` | The internal representation of the argument annotations.    |
+| `description` | `Optional[str]`     | The command description, taken from the function docstring. |
+| `allow_extra` | `bool`              | Whether to allow extra arguments.                           |
+| `parent`      | `Optional[str]`     | Name of the parent command if command is a subcommand.      |
+
 ### <kbd>class</kbd> `Radicli`
+
+#### Attributes
+
+| Name          | Type                               | Description                                                                            |
+| ------------- | ---------------------------------- | -------------------------------------------------------------------------------------- |
+| `prog`        | str                                | Program name displayed in `--help` propmt usage examples, e.g. `"python -m spacy"`.    |
+| `help`        | str                                | Help text for the CLI, displayed in top-level `--help`.                                |
+| `converters`  | `Dict[Type, Callable[[str], Any]]` | Dict mapping types to global converter functions.                                      |
+| `commands`    | `Dict[str, Command]`               | The commands added to the CLI, keyed by name.                                          |
+| `subcommands` | `Dict[str, Dict[str, Command]]`    | The subcommands added to the CLI, keyed by parent name, then keyed by subcommand name. |
 
 #### <kbd>method</kbd> `Radicli.__init__`
 
@@ -218,12 +241,11 @@ Initialize the CLI and create the registry.
 ```python
 from radicli import Radicli
 
-cli = Radicli(name="spacy", prog="python -m spacy")
+cli = Radicli(prog="python -m spacy")
 ```
 
 | Argument     | Type                               | Description                                                                                                                                               |
 | ------------ | ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `name`       | `str`                              | Unique name of the CLI, used to create the registry.                                                                                                      |
 | `prog`       | `Optional[str]`                    | Program name displayed in `--help` propmt usage examples, e.g. `"python -m spacy"`.                                                                       |
 | `help`       | `Optional[str]`                    | Help text for the CLI, displayed in top-level `--help`.                                                                                                   |
 | `converters` | `Dict[Type, Callable[[str], Any]]` | Dict mapping types to converter functions. All arguments with these types will then be passed to the respective converter.                                |
