@@ -176,6 +176,11 @@ class Radicli:
         if len(run_args) <= 1 or run_args[1] == self._help_arg:
             print(self._format_info())
         else:
+            # Make single command CLIs available without command name
+            if len(self.commands) == 1 and len(self.subcommands) <= 1:
+                single_cmd = list(self.commands.keys())[0]
+                if run_args[1] != single_cmd:
+                    run_args.insert(1, single_cmd)
             command = run_args.pop(1)
             args = run_args[1:]
             subcommands = self.subcommands.get(command, {})

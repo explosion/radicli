@@ -317,6 +317,11 @@ def test_cli_subcommands():
     ran_child1 = False
     ran_child2 = False
 
+    @cli.command("test", a=Arg("--a"), b=Arg("--b"))
+    def test(a: int, b: str):
+        # Base command to prevent triggering single-command use case
+        ...
+
     @cli.command("parent", a=Arg("--a"), b=Arg("--b"))
     def parent(a: int, b: str):
         assert a == 1
@@ -542,3 +547,42 @@ def test_cli_custom_help_arg():
 
     cli.run(["", "test", "--a", "hello", "--help"])
     assert ran
+
+
+def test_single_command():
+    """Test that the name can be left out for CLIs with only one command."""
+    cli = Radicli()
+    ran = False
+
+    @cli.command("test", a=Arg("--a"))
+    def test(a: str):
+        assert a == "hello"
+        nonlocal ran
+        ran = True
+
+    cli.run(["", "--a", "hello"])
+    assert ran
+
+
+def test_single_command_subcommands():
+    """Test that the name can be left out for CLIs with only one command."""
+    cli = Radicli()
+    ran_parent = False
+    ran_child = False
+
+    @cli.command("parent", a=Arg("--a"))
+    def parent(a: str):
+        assert a == "hello"
+        nonlocal ran_parent
+        ran_parent = True
+
+    @cli.subcommand("parent", "child", a=Arg("--a"))
+    def child(a: str):
+        assert a == "hello"
+        nonlocal ran_child
+        ran_child = True
+
+    cli.run(["", "--a", "hello"])
+    assert ran_parent
+    cli.run(["", "child", "--a", "hello"])
+    assert ran_child
