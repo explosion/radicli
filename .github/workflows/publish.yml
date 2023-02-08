@@ -3,10 +3,9 @@ name: Publish to PyPi
 on:
   workflow_dispatch:
     inputs:
-      ref:
-        description: 'Ref to build (only uploads on tag)'
-        type: string
-        required: true
+      active:
+        description: 'Publish (tags only)'
+        type: boolean
 
 jobs:
   test:
@@ -15,9 +14,8 @@ jobs:
     name: Build and publish
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-        with:
-          ref: ${{ github.event.inputs.ref }}
+      - name: Checkout ${{ github.head_ref || github.ref_name }}
+        uses: actions/checkout@v3
       - uses: actions/setup-python@v3
         with:
           python-version: "3.10"
@@ -26,7 +24,7 @@ jobs:
       - name: Build sdist and wheel
         run: python -m build --sdist --wheel
       - name: Publish to PyPI
-        if: startsWith(github.ref, 'refs/tags')
+        if: ${{ startsWith(github.ref, 'refs/tags') && github.event.inputs.active }}
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           password: ${{ secrets.PYPI_API_TOKEN }}
