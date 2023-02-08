@@ -4,7 +4,7 @@
 
 `radicli` is a small and very lightweight Python package for creating command line interfaces, built on top of Python's [`argparse`](https://docs.python.org/3/library/argparse.html) module. It introduces minimal overhead, preserves your original Python functions and uses type hints to parse values provided on the CLI. It supports all common types out-of-the-box, including complex ones like `List[str]`, `Literal` and `Enum`, and allows registering custom types with custom converters.
 
-> **Important note:** This package aims to be simple and minimum-dependency option based on the requirements of our libraries. If you're looking for a more full-featured CLI toolkit, check out [`typer`](https://typer.tiangolo.com), [`click`](https://click.palletsprojects.com) or [`plac`](https://plac.readthedocs.io/en/latest/).
+> **Important note:** This package aims to be a simple and minimum-dependency option based on the requirements of our libraries. If you're looking for a more full-featured CLI toolkit, check out [`typer`](https://typer.tiangolo.com), [`click`](https://click.palletsprojects.com) or [`plac`](https://plac.readthedocs.io/en/latest/).
 
 [![GitHub Actions](https://github.com/explosion/radicli/actions/workflows/test/badge.svg)](https://github.com/explosion/radicli/actions/workflows/test.yml)
 [![Current Release Version](https://img.shields.io/github/v/release/explosion/radicli.svg?style=flat-square&include_prereleases&logo=github)](https://github.com/explosion/radicli/releases)
@@ -134,7 +134,7 @@ Hello ALEX!
 
 #### Global converters for custom types
 
-The `converters` argument lets you provide a dict of types mapped to converter functions when initializing `Radicli`. If an argument of that type is encountered, the value is converted automatically. This ensures your Python functions remain composable and don't need additional logic only to satisfy the CLI usage.
+The `converters` argument lets you provide a dict of types mapped to converter functions when initializing `Radicli`. If an argument of that target type is encountered, the input string value is converted automatically. This ensures your Python functions remain composable and don't need additional logic only to satisfy the CLI usage.
 
 The following example shows how to register a custom converter that loads a [spaCy](https://spacy.io) pipeline from a string name, while allowing the function itself to require the `Language` object itself:
 
@@ -224,7 +224,7 @@ cli = Radicli(name="spacy", prog="python -m spacy")
 | Argument     | Type                               | Description                                                                                                                                               |
 | ------------ | ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `name`       | `str`                              | Unique name of the CLI, used to create the registry.                                                                                                      |
-| `prog`       | `Optional[str]`                    | Program name displayed in `--help` propmt usage examples, e.g. `"python -m spacy"`.                                                                       |
+| `prog`       | `Optional[str]`                    | Program name displayed in `--help` prompt usage examples, e.g. `"python -m spacy"`.                                                                       |
 | `help`       | `Optional[str]`                    | Help text for the CLI, displayed in top-level `--help`.                                                                                                   |
 | `converters` | `Dict[Type, Callable[[str], Any]]` | Dict mapping types to converter functions. All arguments with these types will then be passed to the respective converter.                                |
 | `extra_key`  | `str`                              | Name of function argument that receives extra arguments if the `command_with_extra` or `subcommand_with_extra` decorator is used. Defaults to `"_extra"`. |
