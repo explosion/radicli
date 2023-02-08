@@ -48,6 +48,14 @@ $ python cli.py hello Alex --age 35 --greet
 Hello Alex (35)!
 ```
 
+If a file only specifies a **single command** (with or without subcommands), you can optionally leave out the
+command name. So the above example script can also be called like this:
+
+```
+$ python cli.py Alex --age 35 --greet
+Hello Alex (35)!
+```
+
 ### Subcommands
 
 `radicli` supports one level of nested subcommands. The parent command may exist independently, but it doesn't have to.
@@ -311,7 +319,7 @@ Hello world, Alex!
 
 ```python
 @cli.subcommand_with_extra("hello", "world" name=Arg(help="Your name"))
-def hello_world(name: str,_extra: List[str]) -> None:
+def hello_world(name: str, _extra: List[str]) -> None:
     print(f"Hello world, {name}!", _extra])
 ```
 
