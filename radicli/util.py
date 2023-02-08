@@ -314,5 +314,5 @@ class SimpleFrozenDict(dict):
     def pop(self, key: Any, default=None):
         raise NotImplementedError(self.error)
 
-    def update(self, other):
+    def update(self, other, **kwargs):
         raise NotImplementedError(self.error)
