@@ -21,5 +21,11 @@ jobs:
         run: pip install -r requirements.txt
       - name: Run pyright
         run: python -m pyright radicli
+      - name: Build sdist
+        run: python setup.py sdist
+      - name: Clean and install from sdist
+        run: |
+          rm -rf radicli
+          pip install dist/*.tar.gz
       - name: Run pytest
-        run: python -m pytest radicli
+        run: python -m pytest --pyargs radicli
