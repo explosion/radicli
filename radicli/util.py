@@ -185,7 +185,7 @@ def find_base_type(
 def format_type(arg_type: Any) -> str:
     """Get a pretty-printed string for a type."""
     # Nicer formatting for our own TypeVars
-    if isinstance(arg_type, type(NewType)) and arg_type.__supertype__:  # type: ignore
+    if isinstance(arg_type, type(NewType)) and getattr(arg_type, "__supertype__"):  # type: ignore
         return f"{arg_type.__name__} ({format_type(arg_type.__supertype__)})"  # type: ignore
     if hasattr(arg_type, "__name__"):
         return arg_type.__name__
