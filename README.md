@@ -171,13 +171,13 @@ $ python test.py process en_core_web_sm --text Hello world!
 Hello world! ['INTJ', 'NOUN', 'PUNCT']
 ```
 
-If you want to alias an existing type to add custom handling for it, you can use a `TypeVar`. This is also how the built-in [`Path` converters](#custom-types-and-converters) are implemented. In help messages, the type the variable is bound to will be displayed together with the custom name.
+If you want to alias an existing type to add custom handling for it, you can create a `NewType`. This is also how the built-in [`Path` converters](#custom-types-and-converters) are implemented. In help messages, the type it is based on will be displayed together with the custom name.
 
 ```python
-from typing import TypeVar
+from typing import NewType
 from pathlib import Path
 
-ExistingPath = TypeVar("ExistingPath", bound=Path)
+ExistingPath = NewType("ExistingPath", Path)
 
 def convert_existing_path(path_str: str) -> Path:
     path = Path(path_str)

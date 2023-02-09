@@ -1,9 +1,10 @@
 from typing import Any, Callable, Iterable, Type, Union, Optional, Dict, Tuple
-from typing import List, Literal, TypeVar, get_origin, get_args
+from typing import List, Literal, NewType, get_args, get_origin
 from enum import Enum
 from dataclasses import dataclass
 from pathlib import Path
 import inspect
+import argparse
 
 # We need this Iterable type, which is the type origin of types.Iterable
 try:
@@ -13,6 +14,8 @@ except ImportError:
 
 
 BASE_TYPES = [str, int, float, Path]
+ConverterType = Callable[[str], Any]
+ConvertersType = Dict[Union[Type, object], ConverterType]
 
 
 class CliParserError(SystemExit):
@@ -61,7 +64,7 @@ class Arg:
     option: Optional[str] = None
     short: Optional[str] = None
     help: Optional[str] = None
-    converter: Optional[Callable[[str], Any]] = None
+    converter: Optional[ConverterType] = None
     count: bool = False
 
 
@@ -75,18 +78,22 @@ class ArgparseArg:
     default: Any = ...
     # We modify the help to add types so we store it twice to store old and new
     help: Optional[str] = None
-    action: Optional[str] = None
+    action: Optional[Union[str, Type[argparse.Action]]] = None
     choices: Optional[Union[List[str], List[Enum]]] = None
     has_converter: bool = False
 
     def to_argparse(self) -> Tuple[List[str], Dict[str, Any]]:
         """Helper method to generate args and kwargs for Parser.add_argument."""
-        args = []
+        args: List[str] = []
         if self.arg.option:
             args.append(self.arg.option)
         if self.arg.short:
             args.append(self.arg.short)
-        kwargs = {"dest": self.id, "action": self.action, "help": self.help}
+        kwargs: Dict[str, Any] = {
+            "dest": self.id,
+            "action": self.action,
+            "help": self.help,
+        }
         if self.default is not ...:
             kwargs["default"] = self.default
         # Support defaults for positional arguments
@@ -106,7 +113,7 @@ def get_arg(
     param_type: Any,
     *,
     default: Optional[Any] = ...,
-    get_converter: Optional[Callable[[Type], Optional[Callable[[str], Any]]]] = None,
+    get_converter: Optional[Callable[[Type], Optional[ConverterType]]] = None,
     skip_resolve: bool = False,
 ) -> ArgparseArg:
     """Generate an argument to add to argparse and interpret types if possible."""
@@ -192,8 +199,8 @@ def find_base_type(
 def format_type(arg_type: Any) -> str:
     """Get a pretty-printed string for a type."""
     # Nicer formatting for our own TypeVars
-    if isinstance(arg_type, TypeVar) and arg_type.__bound__:
-        return f"{arg_type.__name__} ({format_type(arg_type.__bound__)})"
+    if isinstance(arg_type, type(NewType)) and hasattr(arg_type, "__supertype__"):  # type: ignore
+        return f"{arg_type.__name__} ({format_type(arg_type.__supertype__)})"  # type: ignore
     if hasattr(arg_type, "__name__"):
         return arg_type.__name__
     type_str = str(arg_type)
@@ -268,19 +275,17 @@ def convert_path_or_dash(path_str: str) -> Union[Path, str]:
 
 
 # Custom path types for custom converters
-ExistingPath = TypeVar("ExistingPath", bound=Path)
-ExistingFilePath = TypeVar("ExistingFilePath", bound=Path)
-ExistingDirPath = TypeVar("ExistingDirPath", bound=Path)
-ExistingPathOrDash = TypeVar("ExistingPathOrDash", bound=Union[Path, Literal["-"]])
-ExistingFilePathOrDash = TypeVar(
-    "ExistingFilePathOrDash", bound=Union[Path, Literal["-"]]
-)
-ExistingDirPathOrDash = TypeVar(
-    "ExistingDirPathOrDash", bound=Union[Path, Literal["-"]]
-)
-PathOrDash = TypeVar("PathOrDash", bound=Union[Path, Literal["-"]])
+ExistingPath = NewType("ExistingPath", Path)
+ExistingFilePath = NewType("ExistingFilePath", Path)
+ExistingDirPath = NewType("ExistingDirPath", Path)
 
-DEFAULT_CONVERTERS: Dict[Type, Callable[[str], Any]] = {
+ExistingPathOrDash = Union[ExistingPath, Literal["-"]]
+ExistingFilePathOrDash = Union[ExistingFilePath, Literal["-"]]
+ExistingDirPathOrDash = Union[ExistingDirPath, Literal["-"]]
+PathOrDash = Union[Path, Literal["-"]]
+
+
+DEFAULT_CONVERTERS: ConvertersType = {
     ExistingPath: convert_existing_path,
     ExistingFilePath: convert_existing_file_path,
     ExistingDirPath: convert_existing_dir_path,
