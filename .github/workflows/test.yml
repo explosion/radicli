@@ -2,6 +2,9 @@ name: Test
 
 on: [push, pull_request, workflow_call]
 
+env:
+  PACKAGE: radicli
+
 jobs:
   test:
     name: Run tests
@@ -20,15 +23,14 @@ jobs:
       - name: Install
         run: pip install -r requirements.txt
       - name: Run pyright
-        run: python -m pyright radicli
+        run: python -m pyright ${{ env.PACKAGE }}
       - name: Build sdist
         run: python setup.py sdist
       - name: Remove package directory
-        uses: JesseTG/rm@v1.0.3
-        with:
-          path: radicli
+        run: rm -rf ${{ env.PACKAGE }}
+        shell: bash
       - name: Install from sdist
         run: pip install dist/*.tar.gz
         shell: bash
       - name: Run pytest
-        run: python -m pytest --pyargs radicli
+        run: python -m pytest --pyargs ${{ env.PACKAGE }}
