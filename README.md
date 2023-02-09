@@ -48,6 +48,14 @@ $ python cli.py hello Alex --age 35 --greet
 Hello Alex (35)!
 ```
 
+If a file only specifies a **single command** (with or without subcommands), you can optionally leave out the
+command name. So the above example script can also be called like this:
+
+```
+$ python cli.py Alex --age 35 --greet
+Hello Alex (35)!
+```
+
 ### Subcommands
 
 `radicli` supports one level of nested subcommands. The parent command may exist independently, but it doesn't have to.
@@ -229,8 +237,8 @@ Internal representation of a CLI command. Can be accessed via `Radicli.commands`
 
 | Name          | Type                               | Description                                                                            |
 | ------------- | ---------------------------------- | -------------------------------------------------------------------------------------- |
-| `prog`        | str                                | Program name displayed in `--help` propmt usage examples, e.g. `"python -m spacy"`.    |
-| `help`        | str                                | Help text for the CLI, displayed in top-level `--help`.                                |
+| `prog`        | `str`                              | Program name displayed in `--help` propmt usage examples, e.g. `"python -m spacy"`.    |
+| `help`        | `str`                              | Help text for the CLI, displayed in top-level `--help`.                                |
 | `converters`  | `Dict[Type, Callable[[str], Any]]` | Dict mapping types to global converter functions.                                      |
 | `commands`    | `Dict[str, Command]`               | The commands added to the CLI, keyed by name.                                          |
 | `subcommands` | `Dict[str, Dict[str, Command]]`    | The subcommands added to the CLI, keyed by parent name, then keyed by subcommand name. |
@@ -311,7 +319,7 @@ Hello world, Alex!
 
 ```python
 @cli.subcommand_with_extra("hello", "world" name=Arg(help="Your name"))
-def hello_world(name: str,_extra: List[str]) -> None:
+def hello_world(name: str, _extra: List[str]) -> None:
     print(f"Hello world, {name}!", _extra])
 ```
 
@@ -326,6 +334,24 @@ Hello world, Alex! ['--color', 'blue']
 | `name`      | `str`      | Name of the subcommand.                                                                          |
 | `**args`    | `Arg`      | Keyword arguments defining the argument information. Names need to match the function arguments. |
 | **RETURNS** | `Callable` | The wrapped function.                                                                            |
+
+#### <kbd>method</kbd> `Radicli.placeholder`
+
+Add empty parent command with custom description text for subcommands without
+an executable parent.
+
+```python
+cli.placeholder("parent", description="This is the top-level command description")
+
+@cli.subcommand("parent", "child", name=Arg("--name", help="Your name"))
+def child(name: str) -> None:
+    print(f"Hello {name}!")
+```
+
+| Argument      | Type            | Description                         |
+| ------------- | --------------- | ----------------------------------- |
+| `name`        | `str`           | Name of the command.                |
+| `description` | `Optional[str]` | Command description for help texts. |
 
 #### <kbd>method</kbd> `Radicli.run`
 
