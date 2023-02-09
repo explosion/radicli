@@ -1,4 +1,4 @@
-from typing import Any, Callable, Dict, List, Optional, Type, TypeVar, Tuple
+from typing import Any, Callable, Dict, List, Optional, Type, TypeVar, Tuple, cast
 import sys
 from dataclasses import dataclass
 from inspect import signature
@@ -6,7 +6,7 @@ from inspect import signature
 from .parser import ArgumentParser, HelpFormatter
 from .util import Arg, ArgparseArg, get_arg, join_strings, format_type, format_table
 from .util import format_arg_help, SimpleFrozenDict, CommandNotFoundError
-from .util import CliParserError, DEFAULT_CONVERTERS
+from .util import CliParserError, ConvertersType, DEFAULT_CONVERTERS
 
 # Make available for import
 from .util import ExistingPath, ExistingFilePath, ExistingDirPath  # noqa: F401
@@ -34,7 +34,7 @@ class Command:
 class Radicli:
     prog: Optional[str]
     help: Optional[str]
-    converters: Dict[Type, Callable[[str], Any]]
+    converters: ConvertersType
     extra_key: str
     commands: Dict[str, Command]
     subcommands: Dict[str, Dict[str, Command]]
@@ -46,7 +46,7 @@ class Radicli:
         *,
         prog: Optional[str] = None,
         help: Optional[str] = None,
-        converters: Dict[Type, Callable[[str], Any]] = SimpleFrozenDict(),
+        converters: ConvertersType = SimpleFrozenDict(),
         extra_key: str = "_extra",
     ) -> None:
         """Initialize the CLI and create the registry."""
@@ -251,7 +251,7 @@ class Radicli:
             return values
         if sub_key not in subparsers:
             raise CliParserError(f"invalid subcommand: '{sub_key}'")
-        subparser, subcmd = subparsers[sub_key]
+        subparser, subcmd = subparsers[cast(str, sub_key)]
         sub_namespace, sub_extra = subparser.parse_known_args(args[1:])
         sub_values = {**vars(sub_namespace), self.extra_key: sub_extra}
         sub_values = self._handle_extra(p, sub_values, subcmd.allow_extra)

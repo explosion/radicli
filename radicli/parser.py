@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, NoReturn
 import argparse
 import sys
 
@@ -6,7 +6,7 @@ from .util import format_arg_help, CliParserError
 
 
 class ArgumentParser(argparse.ArgumentParser):
-    def error(self, message: str) -> None:
+    def error(self, message: str) -> NoReturn:
         raise CliParserError(message)
 
     # Overriding this internal function so we can have more control over how
