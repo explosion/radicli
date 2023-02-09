@@ -30,19 +30,21 @@ jobs:
           cd dist
           SDIST=$(python -c "import glob;print(glob.glob('*.tar.gz')[0])" 2>&1)
           WHEEL=$(python -c "import glob;print(glob.glob('*.whl')[0])" 2>&1)
+          echo "SDIST=$SDIST" >> $GITHUB_ENV
+          echo "WHEEL=$WHEEL" >> $GITHUB_ENV
           echo $SDIST
           echo $WHEEL
         shell: bash
       - name: Upload sdist artifact to GitHub
         uses: actions/upload-artifact@v3
         with:
-          name: ${{ SDIST }}
-          path: dist/${{ SDIST }}
+          name: ${{ env.SDIST }}
+          path: dist/${{ env.SDIST }}
       - name: Upload wheel artifact to GitHub
         uses: actions/upload-artifact@v3
         with:
-          name: ${{ WHEEL }}
-          path: dist/${{ WHEEL }}
+          name: ${{ env.WHEEL }}
+          path: dist/${{ env.WHEEL }}
       - name: Publish to PyPI
         if: ${{ startsWith(github.ref, 'refs/tags') && github.event.inputs.active }}
         uses: pypa/gh-action-pypi-publish@release/v1
