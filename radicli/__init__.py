@@ -1,6 +1,6 @@
-from typing import Any, Callable, Dict, List, Optional, Type, TypeVar, Tuple, cast
+from typing import Any, Callable, Dict, List, Optional, Type, TypeVar, Tuple, cast, Set
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from inspect import signature
 
 from .parser import ArgumentParser, HelpFormatter
@@ -12,6 +12,7 @@ from .util import CliParserError, CommandExistsError, ConvertersType, DEFAULT_CO
 from .util import ExistingPath, ExistingFilePath, ExistingDirPath  # noqa: F401
 from .util import ExistingPathOrDash, ExistingFilePathOrDash, PathOrDash  # noqa: F401
 from .util import ExistingDirPathOrDash  # noqa: F401
+from .util import ErrorHandlersType, ErrorHandlerType
 
 
 _CallableT = TypeVar("_CallableT", bound=Callable)
@@ -38,6 +39,7 @@ class Radicli:
     extra_key: str
     commands: Dict[str, Command]
     subcommands: Dict[str, Dict[str, Command]]
+    errors: ErrorHandlersType
     _subcommand_key: str
     _help_arg: str
 
@@ -47,6 +49,7 @@ class Radicli:
         prog: Optional[str] = None,
         help: Optional[str] = None,
         converters: ConvertersType = SimpleFrozenDict(),
+        errors: Optional[ErrorHandlersType] = None,
         extra_key: str = "_extra",
     ) -> None:
         """Initialize the CLI and create the registry."""
@@ -57,6 +60,7 @@ class Radicli:
         self.extra_key = extra_key
         self.commands = {}
         self.subcommands = {}
+        self.errors = dict(errors) if errors is not None else {}
         self._subcommand_key = "__subcommand__"  # should not conflict with arg name!
         self._help_arg = "--help"
 
@@ -213,7 +217,19 @@ class Radicli:
             )
             sub = values.pop(self._subcommand_key, None)
             func = subcommands[sub].func if sub else cmd.func
-            func(**values)
+            # Catch specific error types (and their subclasses),
+            # and invoke their handler callback. Handlers
+            # can return an integer exit code, which will
+            # be passed to sys.exit. If the handler returns
+            # None, the program doesn't exit (useful for testing)
+            errors_map = _expand_error_subclasses(self.errors)
+            try:
+                func(**values)
+            except tuple(errors_map.keys()) as e:
+                handler = errors_map[e.__class__]
+                err_code = handler(e)
+                if err_code is not None:
+                    sys.exit(err_code)
 
     def parse(
         self,
@@ -306,3 +322,16 @@ class Radicli:
                 data.append((f"  {name}", col))
         info = [self.help, "Available commands:", format_table(data)]
         return join_strings(*info, char="\n")
+
+
+def _expand_error_subclasses(
+    errors: Dict[Type[Exception], ErrorHandlerType]
+) -> Dict[Type[Exception], ErrorHandlerType]:
+    # Map subclasses of errors to their parent's handler.
+    output = {}
+    for err, callback in errors.items():
+        if hasattr(err, "__subclasses__"):
+            for subclass in err.__subclasses__():
+                output[subclass] = callback
+        output[err] = callback
+    return output

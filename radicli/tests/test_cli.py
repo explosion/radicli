@@ -1,4 +1,4 @@
-from typing import List, Iterator, Optional, Literal
+from typing import List, Iterator, Optional, Literal, Type
 from enum import Enum
 from dataclasses import dataclass
 import pytest
@@ -586,3 +586,50 @@ def test_single_command_subcommands():
     assert ran_parent
     cli.run(["", "child", "--a", "hello"])
     assert ran_child
+
+
+@pytest.mark.parametrize(
+    "raise_error, handle_errors, handler_return, expect_handled, expect_exit",
+    [
+        (None, [KeyError], None, False, False),
+        (KeyError, [KeyError], None, True, False),
+        (KeyError, [KeyError], 1, True, True),
+        (KeyError, [], 1, True, True),
+        (KeyError, [ValueError], 1, True, True),
+    ],
+)
+def test_cli_errors(
+    raise_error: Optional[Type[Exception]],
+    handle_errors: List[Type[Exception]],
+    handler_return: Optional[int],
+    expect_handled: bool,
+    expect_exit: bool,
+):
+    handler_ran = False
+
+    def error_handler(e: Exception) -> Optional[int]:
+        nonlocal handler_ran
+        handler_ran = True
+        return handler_return
+
+    cli = Radicli(errors={e: error_handler for e in handle_errors})
+
+    @cli.command("test")
+    def test():
+        nonlocal ran
+        ran = True
+        if raise_error is not None:
+            raise raise_error
+
+    ran = False
+
+    if raise_error is not None and raise_error not in handle_errors:
+        with pytest.raises(raise_error):
+            cli.run(["", "test"])
+    elif expect_exit:
+        with pytest.raises(SystemExit):
+            cli.run(["", "test"])
+    else:
+        cli.run(["", "test"])
+        assert ran
+        assert handler_ran is expect_handled

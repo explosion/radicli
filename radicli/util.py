@@ -1,10 +1,11 @@
 from typing import Any, Callable, Iterable, Type, Union, Optional, Dict, Tuple
-from typing import List, Literal, NewType, get_args, get_origin
+from typing import List, Literal, NewType, get_args, get_origin, Set
 from enum import Enum
 from dataclasses import dataclass
 from pathlib import Path
 import inspect
 import argparse
+import sys
 
 # We need this Iterable type, which is the type origin of types.Iterable
 try:
@@ -16,6 +17,8 @@ except ImportError:
 BASE_TYPES = [str, int, float, Path]
 ConverterType = Callable[[str], Any]
 ConvertersType = Dict[Union[Type, object], ConverterType]
+ErrorHandlerType = Callable[[Exception], Optional[int]]
+ErrorHandlersType = Dict[Type[Exception], ErrorHandlerType]
 
 
 class CliParserError(SystemExit):
