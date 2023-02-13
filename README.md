@@ -307,7 +307,7 @@ Hello Alex (35) ['--color', 'red']
 The decorator used to wrap one level of subcommand functions.
 
 ```python
-@cli.subcommand("hello", "world" name=Arg(help="Your name"))
+@cli.subcommand("hello", "world", name=Arg(help="Your name"))
 def hello_world(name: str) -> None:
     print(f"Hello world, {name}!")
 ```
@@ -318,7 +318,7 @@ Hello world, Alex!
 ```
 
 ```python
-@cli.subcommand_with_extra("hello", "world" name=Arg(help="Your name"))
+@cli.subcommand_with_extra("hello", "world", name=Arg(help="Your name"))
 def hello_world(name: str, _extra: List[str]) -> None:
     print(f"Hello world, {name}!", _extra])
 ```
