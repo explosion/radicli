@@ -203,6 +203,29 @@ $ python cli.py hello --name Alex --age 35 --color blue
 Hello Alex! ['--age', '35', '--color', 'blue']
 ```
 
+### Command aliases by stacking decorators
+
+The command and subcommand decorators can be stacked to make the same function available via different command aliases. In this case, you just need to make sure that all decorators receive the same argument annotations, e.g. by moving them out to a variable.
+
+```python
+args = dict(
+    name=Arg(help="Your name"),
+    age=Arg("--age", "-a", help="Your age")
+)
+
+@cli.command("hello", **args)
+@cli.command("hey", **args)
+@cli.subcommand("greet", "person", **args)
+def hello(name: str, age: int):
+    print(f"Hello {name} ({age})!")
+```
+
+```
+$ python cli.py hello --name Alex --age 35
+$ python cli.py hey --name Alex --age 35
+$ python cli.py greet person --name Alex --age 35
+```
+
 ## 🎛 API
 
 ### <kbd>dataclass</kbd> `Arg`
