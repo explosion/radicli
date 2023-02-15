@@ -166,8 +166,8 @@ def get_arg(
         arg.action = "store_true"
         return arg
     if inspect.isclass(param_type) and issubclass(param_type, Enum):
-        arg.choices = list(param_type.__members__.values())
-        arg.type = lambda value: param_type.__members__.get(value, value)
+        arg.choices = list(param_type.__members__.keys())
+        arg.type = lambda value: getattr(param_type, value, value)
         return arg
     if not origin:
         raise UnsupportedTypeError(param, param_type)

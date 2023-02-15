@@ -1,4 +1,5 @@
 from typing import Any, NoReturn
+from enum import Enum
 import argparse
 import sys
 
@@ -26,6 +27,14 @@ class ArgumentParser(argparse.ArgumentParser):
             msg = f"argument {arg}: error encountered in {name} for value: {arg_string}\n{e}"
             raise CliParserError(msg) from e
         return result
+
+    def _check_value(self, action: argparse.Action, value: Any) -> None:
+        if action.choices is not None:
+            check_value = value.name if isinstance(value, Enum) else value
+            if check_value not in action.choices:
+                choices = ", ".join(map(repr, action.choices))
+                msg = f"invalid choice: {check_value!r} (choose from {choices})"
+                raise argparse.ArgumentError(action, msg)
 
 
 class HelpFormatter(argparse.HelpFormatter):

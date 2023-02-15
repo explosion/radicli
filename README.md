@@ -108,19 +108,17 @@ def hello(color: Literal["red", "blue", "green"]):
     print(color)  # this will be a string
 ```
 
-`Enum`s are also supported and in this case, the enum value (string) can be provided on the CLI and the function receives the selected enum member.
-
-> ⚠️ Note that enum members don't show up as nicely in the command's `--help` and error messages, which can potentially lead to confusion. It's therefore better to use `Literal`s if possible.
+`Enum`s are also supported and in this case, the enum key can be provided on the CLI and the function receives the selected enum member.
 
 ```python
 class ColorEnum(Enum):
-    RED = "red"
-    BLUE = "blue"
-    GREEN = "green"
+    red = "the color red"
+    blue = "the color blue"
+    green = "the color green"
 
 @cli.command("hello", color=Arg("--color", help="Pick a color"))
 def hello(color: ColorEnum):
-    print(color)  # this will be the enum, e.g. ColorEnum.RED
+    print(color)  # this will be the enum, e.g. ColorEnum.red
 ```
 
 ### Using custom types and converters
