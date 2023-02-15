@@ -291,11 +291,43 @@ def test_cli_converters_generics():
 
     @cli.command("test", a=Arg("--a"))
     def test(a: CustomGeneric[str]):
-        assert a == "generic: yo!"
+        assert a == "generic: x"
         nonlocal ran
         ran = True
 
-    cli.run(["", "test", "--a", "yo!"])
+    cli.run(["", "test", "--a", "x"])
+    assert ran
+
+
+def test_cli_converters_generics_multiple():
+    _KindT = TypeVar("_KindT")
+
+    class CustomGeneric(Generic[_KindT]):
+        ...
+
+    converters = {
+        CustomGeneric: lambda value: f"generic: {value}",
+        CustomGeneric[str]: lambda value: f"generic str: {value}",
+        CustomGeneric[int]: lambda value: f"generic int: {value}",
+    }
+    cli = Radicli(converters=converters)
+    ran = False
+
+    @cli.command("test", a=Arg("--a"), b=Arg("--b"), c=Arg("--c"), d=Arg("--d"))
+    def test(
+        a: CustomGeneric,
+        b: CustomGeneric[Path],
+        c: CustomGeneric[str],
+        d: CustomGeneric[int],
+    ):
+        assert a == "generic: x"
+        assert b == "generic: y"
+        assert c == "generic str: z"
+        assert d == "generic int: 3"
+        nonlocal ran
+        ran = True
+
+    cli.run(["", "test", "--a", "x", "--b", "y", "--c", "z", "--d", "3"])
     assert ran
 
 
