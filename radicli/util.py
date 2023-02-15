@@ -126,18 +126,21 @@ def get_arg(
         if not arg.default:
             arg.default = 0
         return arg
+    # Need to do this first so we can recursively resolve custom types like
+    # Union[ExistingPath] etc.
+    origin = get_origin(param_type)
+    args = get_args(param_type)
     converter = get_converter(param_type) if get_converter else None
+    if get_converter and not converter:
+        # Check if we have a converter for the origin, e.g. for generics Foo[Bar]
+        converter = get_converter(origin)  # type: ignore
     if converter:
         arg.type = converter
         arg.has_converter = True
         return arg
     if skip_resolve:
         return arg
-    # Need to do this first so we can recursively resolve custom types like
-    # Union[ExistingPath] etc.
-    origin = get_origin(param_type)
-    args = get_args(param_type)
-    if origin == Union:
+    if origin is Union:
         arg_types = [a for a in args if a != type(None)]  # noqa: E721
         if arg_types:
             return get_arg(
@@ -150,7 +153,7 @@ def get_arg(
     if param_type in BASE_TYPES:
         arg.type = param_type
         return arg
-    if param_type == bool:
+    if param_type is bool:
         if not orig_arg.option:
             raise InvalidArgumentError(
                 arg.id,
@@ -168,12 +171,12 @@ def get_arg(
         return arg
     if not origin:
         raise UnsupportedTypeError(param, param_type)
-    if origin == Literal and len(args):
+    if origin is Literal and len(args):
         arg.choices = list(args)
         arg.type = type(args[0])
         return arg
     if origin in (list, IterableType):
-        if len(args) and get_origin(args[0]) == Literal:
+        if len(args) and get_origin(args[0]) is Literal:
             literal_args = get_args(args[0])
             if literal_args:
                 arg.type = type(literal_args[0])

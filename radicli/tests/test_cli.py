@@ -1,4 +1,4 @@
-from typing import List, Iterator, Optional, Literal
+from typing import List, Iterator, Optional, Literal, TypeVar, Generic
 from enum import Enum
 from dataclasses import dataclass
 import pytest
@@ -276,6 +276,58 @@ def test_cli_global_converters():
 
     args = ["", "test", "--a", "hello", "--b", "foo", "--b", "bar", "--c", "123|Person"]
     cli.run(args)
+    assert ran
+
+
+def test_cli_converters_generics():
+    _KindT = TypeVar("_KindT", bound=str)
+
+    class CustomGeneric(Generic[_KindT]):
+        ...
+
+    converters = {CustomGeneric: lambda value: f"generic: {value}"}
+    cli = Radicli(converters=converters)
+    ran = False
+
+    @cli.command("test", a=Arg("--a"))
+    def test(a: CustomGeneric[str]):
+        assert a == "generic: x"
+        nonlocal ran
+        ran = True
+
+    cli.run(["", "test", "--a", "x"])
+    assert ran
+
+
+def test_cli_converters_generics_multiple():
+    _KindT = TypeVar("_KindT")
+
+    class CustomGeneric(Generic[_KindT]):
+        ...
+
+    converters = {
+        CustomGeneric: lambda value: f"generic: {value}",
+        CustomGeneric[str]: lambda value: f"generic str: {value}",
+        CustomGeneric[int]: lambda value: f"generic int: {value}",
+    }
+    cli = Radicli(converters=converters)
+    ran = False
+
+    @cli.command("test", a=Arg("--a"), b=Arg("--b"), c=Arg("--c"), d=Arg("--d"))
+    def test(
+        a: CustomGeneric,
+        b: CustomGeneric[Path],
+        c: CustomGeneric[str],
+        d: CustomGeneric[int],
+    ):
+        assert a == "generic: x"
+        assert b == "generic: y"
+        assert c == "generic str: z"
+        assert d == "generic int: 3"
+        nonlocal ran
+        ran = True
+
+    cli.run(["", "test", "--a", "x", "--b", "y", "--c", "z", "--d", "3"])
     assert ran
 
 
