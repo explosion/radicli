@@ -13,6 +13,7 @@ except ImportError:
     from collections import Iterable as IterableType  # type: ignore
 
 
+DEFAULT_PLACEHOLDER = argparse.SUPPRESS
 BASE_TYPES = [str, int, float, Path]
 ConverterType = Callable[[str], Any]
 ConvertersType = Dict[Union[Type, object], ConverterType]
@@ -75,7 +76,7 @@ class ArgparseArg:
     id: str
     arg: Arg
     type: Optional[Union[Type, Callable[[str], Any]]] = None
-    default: Any = ...
+    default: Any = DEFAULT_PLACEHOLDER
     # We modify the help to add types so we store it twice to store old and new
     help: Optional[str] = None
     action: Optional[Union[str, Type[argparse.Action]]] = None
@@ -93,11 +94,10 @@ class ArgparseArg:
             "dest": self.id,
             "action": self.action,
             "help": self.help,
+            "default": self.default,
         }
-        if self.default is not ...:
-            kwargs["default"] = self.default
         # Support defaults for positional arguments
-        if not self.arg.option and self.default is not ...:
+        if not self.arg.option and self.default is not DEFAULT_PLACEHOLDER:
             kwargs["nargs"] = "?"
         # Not all arguments are valid for all options
         if self.type is not None:
@@ -112,14 +112,13 @@ def get_arg(
     orig_arg: Arg,
     param_type: Any,
     *,
-    default: Optional[Any] = ...,
+    default: Optional[Any] = DEFAULT_PLACEHOLDER,
     get_converter: Optional[Callable[[Type], Optional[ConverterType]]] = None,
     skip_resolve: bool = False,
 ) -> ArgparseArg:
     """Generate an argument to add to argparse and interpret types if possible."""
     arg = ArgparseArg(id=param, arg=orig_arg, type=param_type, help=orig_arg.help)
-    if default is not ...:
-        arg.default = default
+    arg.default = default
     if orig_arg.count:
         arg.action = "count"
         arg.type = None
@@ -141,6 +140,8 @@ def get_arg(
     if skip_resolve:
         return arg
     if origin is Union:
+        if type(None) in args and default is DEFAULT_PLACEHOLDER:
+            default = None
         arg_types = [a for a in args if a != type(None)]  # noqa: E721
         if arg_types:
             return get_arg(

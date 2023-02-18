@@ -131,6 +131,28 @@ def test_cli_defaults():
     assert ran
 
 
+def test_cli_required():
+    cli = Radicli()
+
+    @cli.command("test", a=Arg(), b=Arg("--b"), c=Arg("--c"), d=Arg("--d"))
+    def test(a: str, b: str, c: int, d: int = 0):
+        ...
+
+    with pytest.raises(CliParserError) as err:
+        cli.run(["", "test", "hello", "--c", "1"])
+    assert str(err.value).endswith("required: --b")
+    with pytest.raises(CliParserError) as err:
+        cli.run(["", "test", "--b", "hello", "--c", "1"])
+    assert str(err.value).endswith("required: a")
+    with pytest.raises(CliParserError) as err:
+        # Positional, so this is parsed in argparse before it hits custom logic
+        cli.run(["", "test", "--c", "1"])
+    assert str(err.value).endswith("required: a")
+    with pytest.raises(CliParserError) as err:
+        cli.run(["", "test", "hello", "--d", "1"])
+    assert str(err.value).endswith("required: --b, --c")
+
+
 def test_cli_literals():
     cli = Radicli()
     ran = False
@@ -601,7 +623,6 @@ def test_cli_custom_help_arg():
     assert ran
 
 
-def test_single_command():
 def test_cli_version(capsys):
     version = "1.2.3"
     cli = Radicli(version=version)
@@ -620,6 +641,8 @@ def test_cli_version(capsys):
     cli.run(["", "test", "--a", "hello"])
     assert ran
 
+
+def test_cli_single_command():
     """Test that the name can be left out for CLIs with only one command."""
     cli = Radicli()
     ran = False
@@ -634,7 +657,7 @@ def test_cli_version(capsys):
     assert ran
 
 
-def test_single_command_subcommands():
+def test_cli_single_command_subcommands():
     """Test that the name can be left out for CLIs with only one command."""
     cli = Radicli()
     ran_parent = False
