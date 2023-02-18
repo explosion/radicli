@@ -6,7 +6,8 @@ from inspect import signature
 from .parser import ArgumentParser, HelpFormatter
 from .util import Arg, ArgparseArg, get_arg, join_strings, format_type, format_table
 from .util import format_arg_help, SimpleFrozenDict, CommandNotFoundError
-from .util import CliParserError, CommandExistsError, ConvertersType, DEFAULT_CONVERTERS
+from .util import CliParserError, CommandExistsError, ConvertersType
+from .util import DEFAULT_CONVERTERS, DEFAULT_PLACEHOLDER
 
 # Make available for import
 from .util import ExistingPath, ExistingFilePath, ExistingDirPath  # noqa: F401
@@ -35,6 +36,7 @@ class Command:
 class Radicli:
     prog: Optional[str]
     help: Optional[str]
+    version: Optional[str]
     converters: ConvertersType
     extra_key: str
     commands: Dict[str, Command]
@@ -47,14 +49,16 @@ class Radicli:
         self,
         *,
         prog: Optional[str] = None,
-        help: Optional[str] = None,
+        help: str = "",
+        version: Optional[str] = None,
         converters: ConvertersType = SimpleFrozenDict(),
         errors: Optional[ErrorHandlersType] = None,
         extra_key: str = "_extra",
     ) -> None:
         """Initialize the CLI and create the registry."""
         self.prog = prog
-        self.help = help
+        self.help = help.strip()
+        self.version = version
         self.converters = dict(DEFAULT_CONVERTERS)  # make sure to copy
         self.converters.update(converters)
         self.extra_key = extra_key
@@ -118,58 +122,70 @@ class Radicli:
         def cli_wrapper(cli_func: _CallableT) -> _CallableT:
             if name in registry:
                 raise CommandExistsError(name)
-            sig = signature(cli_func)
-            sig_types = {}
-            sig_defaults = {}
-            for param_name, param_value in sig.parameters.items():
-                annot = param_value.annotation
-                if param_name == self.extra_key:
-                    annot = List[str]  # set automatically since we know it
-                elif annot == param_value.empty:
-                    annot = str  # default to string for unset types
-                sig_types[param_name] = annot
-                sig_defaults[param_name] = (
-                    param_value.default
-                    if param_value.default != param_value.empty
-                    else ...  # placeholder for unset defaults
-                )
-                if param_name not in args:  # support args not in decorator
-                    args[param_name] = Arg()
-            cli_args = []
-            for param, arg_info in args.items():
-                if param not in sig_types:  # unknown argument
-                    raise CliParserError(f"argument not found in function: {param}")
-
-                def get_converter(arg_type: Type) -> Optional[Callable[[str], Any]]:
-                    return self.converters.get(arg_type, arg_info.converter)
-
-                param_type = sig_types[param]
-                converter = get_converter(param_type)
-                arg_type = converter or param_type
-                arg = get_arg(
-                    param,
-                    arg_info,
-                    arg_type,
-                    default=sig_defaults[param],
-                    skip_resolve=converter is not None,
-                    get_converter=get_converter,
-                )
-                has_converter = converter is not None or arg.has_converter
-                display_type = param_type if has_converter else arg_type
-                arg.help = join_strings(arg.help, f"({format_type(display_type)})")
-                cli_args.append(arg)
-            cmd = Command(
-                name=name,
-                func=cli_func,
-                args=cli_args,
-                description=cli_func.__doc__,
-                allow_extra=allow_extra,
-                parent=parent,
+            cmd = self.make_command(
+                name, args, cli_func, parent=parent, allow_extra=allow_extra
             )
             registry[name] = cmd
             return cli_func
 
         return cli_wrapper
+
+    def make_command(
+        self,
+        name: str,
+        args: Dict[str, Any],
+        func: Callable,
+        *,
+        parent: Optional[str] = None,
+        allow_extra: bool = False,
+    ) -> Command:
+        sig = signature(func)
+        sig_types = {}
+        sig_defaults = {}
+        for param_name, param_value in sig.parameters.items():
+            annot = param_value.annotation
+            if param_name == self.extra_key:
+                annot = List[str]  # set automatically since we know it
+            elif annot == param_value.empty:
+                annot = str  # default to string for unset types
+            sig_types[param_name] = annot
+            sig_defaults[param_name] = (
+                param_value.default
+                if param_value.default != param_value.empty
+                else DEFAULT_PLACEHOLDER  # placeholder for unset defaults
+            )
+            if param_name not in args:  # support args not in decorator
+                args[param_name] = Arg()
+        cli_args = []
+        for param, arg_info in args.items():
+            if param not in sig_types:  # unknown argument
+                raise CliParserError(f"argument not found in function: {param}")
+
+            def get_converter(arg_type: Type) -> Optional[Callable[[str], Any]]:
+                return self.converters.get(arg_type, arg_info.converter)
+
+            param_type = sig_types[param]
+            converter = get_converter(param_type)
+            arg_type = converter or param_type
+            arg = get_arg(
+                param,
+                arg_info,
+                arg_type,
+                orig_type=param_type,
+                default=sig_defaults[param],
+                skip_resolve=converter is not None,
+                get_converter=get_converter,
+            )
+            arg.help = join_strings(arg.help, f"({format_type(arg.display_type)})")
+            cli_args.append(arg)
+        return Command(
+            name=name,
+            func=func,
+            args=cli_args,
+            description=func.__doc__,
+            allow_extra=allow_extra,
+            parent=parent,
+        )
 
     def placeholder(self, name: str, *, description: Optional[str] = None) -> None:
         """Add empty parent command placeholder with help for subcommands."""
@@ -247,7 +263,10 @@ class Radicli:
             description=description,
             formatter_class=HelpFormatter,
             add_help=not any(a.arg.option == self._help_arg for a in arg_info),
+            argument_default=DEFAULT_PLACEHOLDER,
         )
+        if self.version:
+            p.add_argument("--version", action="version", version=self.version)
         self._add_args(p, arg_info)
         subparsers: Dict[str, Tuple[ArgumentParser, Command]] = {}
         if subcommands:
@@ -266,6 +285,7 @@ class Radicli:
                     prog=join_strings(self.prog, sub_cmd.parent, sub_name),
                     add_help=add_help,
                     formatter_class=HelpFormatter,
+                    argument_default=DEFAULT_PLACEHOLDER,
                 )
                 subparsers[sub_cmd.name] = (subp, sub_cmd)
                 self._add_args(subp, sub_cmd.args)
@@ -275,14 +295,14 @@ class Radicli:
         values = {**vars(namespace), self.extra_key: extra}
         sub_key = values.pop(self._subcommand_key, None)
         if not sub_key:  # we're not in a subcommand
-            values = self._handle_extra(p, values, allow_extra)
-            return values
+            cmds = self.commands[name] if name in self.commands else None
+            return self._validate(cmds, values, allow_extra)
         if sub_key not in subparsers:
             raise CliParserError(f"invalid subcommand: '{sub_key}'")
         subparser, subcmd = subparsers[cast(str, sub_key)]
         sub_namespace, sub_extra = subparser.parse_known_args(args[1:])
         sub_values = {**vars(sub_namespace), self.extra_key: sub_extra}
-        sub_values = self._handle_extra(p, sub_values, subcmd.allow_extra)
+        sub_values = self._validate(subcmd, sub_values, subcmd.allow_extra)
         return {**sub_values, self._subcommand_key: sub_key}
 
     def _add_args(self, parser: ArgumentParser, args: List[ArgparseArg]) -> None:
@@ -293,19 +313,27 @@ class Radicli:
             func_args, func_kwargs = arg.to_argparse()
             parser.add_argument(*func_args, **func_kwargs)
 
-    def _handle_extra(
-        self, parser: ArgumentParser, values: Dict[str, Any], allow_extra: bool
+    def _validate(
+        self, command: Optional[Command], values: Dict[str, Any], allow_extra: bool
     ) -> Dict[str, Any]:
         """
+        Validate required args separately to avoid subparser conflicts.
         Handle extra arguments and raise error if needed. We're doing this
         manually to avoide false positive argparse errors with subcommands.
         """
         extra = values.get(self.extra_key)
         if not allow_extra:
             if extra:
-                parser.error(f"unrecognized arguments: {' '.join(extra)}")
+                raise CliParserError(f"unrecognized arguments: {' '.join(extra)}")
             values.pop(self.extra_key, None)
-            return values
+        if command:
+            required = []
+            for arg in command.args:
+                if arg.id not in values or values[arg.id] is DEFAULT_PLACEHOLDER:
+                    required.append(arg.arg.option or arg.id)
+            if required:
+                err = f"the following arguments are required: {', '.join(required)}"
+                raise CliParserError(err)
         return values
 
     def _format_info(self) -> str:
@@ -320,7 +348,7 @@ class Radicli:
             if name not in self.commands:
                 col = f"Subcommands: {', '.join(self.subcommands[name])}"
                 data.append((f"  {name}", col))
-        info = [self.help, "Available commands:", format_table(data)]
+        info = [self.help, "\nAvailable commands:", format_table(data)]
         return join_strings(*info, char="\n")
 
 

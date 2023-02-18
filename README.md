@@ -108,19 +108,17 @@ def hello(color: Literal["red", "blue", "green"]):
     print(color)  # this will be a string
 ```
 
-`Enum`s are also supported and in this case, the enum value (string) can be provided on the CLI and the function receives the selected enum member.
-
-> ⚠️ Note that enum members don't show up as nicely in the command's `--help` and error messages, which can potentially lead to confusion. It's therefore better to use `Literal`s if possible.
+`Enum`s are also supported and in this case, the enum key can be provided on the CLI and the function receives the selected enum member.
 
 ```python
 class ColorEnum(Enum):
-    RED = "red"
-    BLUE = "blue"
-    GREEN = "green"
+    red = "the color red"
+    blue = "the color blue"
+    green = "the color green"
 
 @cli.command("hello", color=Arg("--color", help="Pick a color"))
 def hello(color: ColorEnum):
-    print(color)  # this will be the enum, e.g. ColorEnum.RED
+    print(color)  # this will be the enum, e.g. ColorEnum.red
 ```
 
 ### Using custom types and converters
@@ -203,6 +201,29 @@ $ python cli.py hello --name Alex --age 35 --color blue
 Hello Alex! ['--age', '35', '--color', 'blue']
 ```
 
+### Command aliases by stacking decorators
+
+The command and subcommand decorators can be stacked to make the same function available via different command aliases. In this case, you just need to make sure that all decorators receive the same argument annotations, e.g. by moving them out to a variable.
+
+```python
+args = dict(
+    name=Arg(help="Your name"),
+    age=Arg("--age", "-a", help="Your age")
+)
+
+@cli.command("hello", **args)
+@cli.command("hey", **args)
+@cli.subcommand("greet", "person", **args)
+def hello(name: str, age: int):
+    print(f"Hello {name} ({age})!")
+```
+
+```
+$ python cli.py hello --name Alex --age 35
+$ python cli.py hey --name Alex --age 35
+$ python cli.py greet person --name Alex --age 35
+```
+
 ## 🎛 API
 
 ### <kbd>dataclass</kbd> `Arg`
@@ -237,8 +258,9 @@ Internal representation of a CLI command. Can be accessed via `Radicli.commands`
 
 | Name          | Type                               | Description                                                                            |
 | ------------- | ---------------------------------- | -------------------------------------------------------------------------------------- |
-| `prog`        | `str`                              | Program name displayed in `--help` propmt usage examples, e.g. `"python -m spacy"`.    |
-| `help`        | `str`                              | Help text for the CLI, displayed in top-level `--help`.                                |
+| `prog`        | `Optional[str]`                    | Program name displayed in `--help` prompt usage examples, e.g. `"python -m spacy"`.    |
+| `help`        | `str`                              | Help text for the CLI, displayed in top-level `--help`. Defaults to `""`.              |
+| `version`     | `Optional[str]`                    | Version available via `--version`, if set.                                             |
 | `converters`  | `Dict[Type, Callable[[str], Any]]` | Dict mapping types to global converter functions.                                      |
 | `commands`    | `Dict[str, Command]`               | The commands added to the CLI, keyed by name.                                          |
 | `subcommands` | `Dict[str, Dict[str, Command]]`    | The subcommands added to the CLI, keyed by parent name, then keyed by subcommand name. |
@@ -256,7 +278,8 @@ cli = Radicli(prog="python -m spacy")
 | Argument     | Type                               | Description                                                                                                                                               |
 | ------------ | ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `prog`       | `Optional[str]`                    | Program name displayed in `--help` prompt usage examples, e.g. `"python -m spacy"`.                                                                       |
-| `help`       | `Optional[str]`                    | Help text for the CLI, displayed in top-level `--help`.                                                                                                   |
+| `help`       | `str`                              | Help text for the CLI, displayed in top-level `--help`. Defaults to `""`.                                                                                 |
+| `version`    | `Optional[str]`                    | Version available via `--version`, if set.                                                                                                                |
 | `converters` | `Dict[Type, Callable[[str], Any]]` | Dict mapping types to converter functions. All arguments with these types will then be passed to the respective converter.                                |
 | `extra_key`  | `str`                              | Name of function argument that receives extra arguments if the `command_with_extra` or `subcommand_with_extra` decorator is used. Defaults to `"_extra"`. |
 
@@ -307,7 +330,7 @@ Hello Alex (35) ['--color', 'red']
 The decorator used to wrap one level of subcommand functions.
 
 ```python
-@cli.subcommand("hello", "world" name=Arg(help="Your name"))
+@cli.subcommand("hello", "world", name=Arg(help="Your name"))
 def hello_world(name: str) -> None:
     print(f"Hello world, {name}!")
 ```
@@ -318,7 +341,7 @@ Hello world, Alex!
 ```
 
 ```python
-@cli.subcommand_with_extra("hello", "world" name=Arg(help="Your name"))
+@cli.subcommand_with_extra("hello", "world", name=Arg(help="Your name"))
 def hello_world(name: str, _extra: List[str]) -> None:
     print(f"Hello world, {name}!", _extra])
 ```

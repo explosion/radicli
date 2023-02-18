@@ -1,4 +1,4 @@
-from typing import List, Iterator, Optional, Literal, Type
+from typing import List, Iterator, Optional, Literal, TypeVar, Generic, Type
 from enum import Enum
 from dataclasses import dataclass
 import pytest
@@ -129,6 +129,28 @@ def test_cli_defaults():
 
     cli.run(["", "test", "yo", "--c", "one"])
     assert ran
+
+
+def test_cli_required():
+    cli = Radicli()
+
+    @cli.command("test", a=Arg(), b=Arg("--b"), c=Arg("--c"), d=Arg("--d"))
+    def test(a: str, b: str, c: int, d: int = 0):
+        ...
+
+    with pytest.raises(CliParserError) as err:
+        cli.run(["", "test", "hello", "--c", "1"])
+    assert str(err.value).endswith("required: --b")
+    with pytest.raises(CliParserError) as err:
+        cli.run(["", "test", "--b", "hello", "--c", "1"])
+    assert str(err.value).endswith("required: a")
+    with pytest.raises(CliParserError) as err:
+        # Positional, so this is parsed in argparse before it hits custom logic
+        cli.run(["", "test", "--c", "1"])
+    assert str(err.value).endswith("required: a")
+    with pytest.raises(CliParserError) as err:
+        cli.run(["", "test", "hello", "--d", "1"])
+    assert str(err.value).endswith("required: --b, --c")
 
 
 def test_cli_literals():
@@ -276,6 +298,58 @@ def test_cli_global_converters():
 
     args = ["", "test", "--a", "hello", "--b", "foo", "--b", "bar", "--c", "123|Person"]
     cli.run(args)
+    assert ran
+
+
+def test_cli_converters_generics():
+    _KindT = TypeVar("_KindT", bound=str)
+
+    class CustomGeneric(Generic[_KindT]):
+        ...
+
+    converters = {CustomGeneric: lambda value: f"generic: {value}"}
+    cli = Radicli(converters=converters)
+    ran = False
+
+    @cli.command("test", a=Arg("--a"))
+    def test(a: CustomGeneric[str]):
+        assert a == "generic: x"
+        nonlocal ran
+        ran = True
+
+    cli.run(["", "test", "--a", "x"])
+    assert ran
+
+
+def test_cli_converters_generics_multiple():
+    _KindT = TypeVar("_KindT")
+
+    class CustomGeneric(Generic[_KindT]):
+        ...
+
+    converters = {
+        CustomGeneric: lambda value: f"generic: {value}",
+        CustomGeneric[str]: lambda value: f"generic str: {value}",
+        CustomGeneric[int]: lambda value: f"generic int: {value}",
+    }
+    cli = Radicli(converters=converters)
+    ran = False
+
+    @cli.command("test", a=Arg("--a"), b=Arg("--b"), c=Arg("--c"), d=Arg("--d"))
+    def test(
+        a: CustomGeneric,
+        b: CustomGeneric[Path],
+        c: CustomGeneric[str],
+        d: CustomGeneric[int],
+    ):
+        assert a == "generic: x"
+        assert b == "generic: y"
+        assert c == "generic str: z"
+        assert d == "generic int: 3"
+        nonlocal ran
+        ran = True
+
+    cli.run(["", "test", "--a", "x", "--b", "y", "--c", "z", "--d", "3"])
     assert ran
 
 
@@ -549,7 +623,26 @@ def test_cli_custom_help_arg():
     assert ran
 
 
-def test_single_command():
+def test_cli_version(capsys):
+    version = "1.2.3"
+    cli = Radicli(version=version)
+    ran = False
+
+    @cli.command("test", a=Arg("--a"))
+    def test(a: str):
+        assert a == "hello"
+        nonlocal ran
+        ran = True
+
+    with pytest.raises(SystemExit):
+        cli.run(["", "--version"])
+    captured = capsys.readouterr()
+    assert captured.out.strip() == version
+    cli.run(["", "test", "--a", "hello"])
+    assert ran
+
+
+def test_cli_single_command():
     """Test that the name can be left out for CLIs with only one command."""
     cli = Radicli()
     ran = False
@@ -564,7 +657,7 @@ def test_single_command():
     assert ran
 
 
-def test_single_command_subcommands():
+def test_cli_single_command_subcommands():
     """Test that the name can be left out for CLIs with only one command."""
     cli = Radicli()
     ran_parent = False

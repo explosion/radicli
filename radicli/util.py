@@ -14,6 +14,7 @@ except ImportError:
     from collections import Iterable as IterableType  # type: ignore
 
 
+DEFAULT_PLACEHOLDER = argparse.SUPPRESS
 BASE_TYPES = [str, int, float, Path]
 ConverterType = Callable[[str], Any]
 ConvertersType = Dict[Union[Type, object], ConverterType]
@@ -78,12 +79,18 @@ class ArgparseArg:
     id: str
     arg: Arg
     type: Optional[Union[Type, Callable[[str], Any]]] = None
-    default: Any = ...
+    orig_type: Optional[Union[Type, Callable[[str], Any]]] = None
+    default: Any = DEFAULT_PLACEHOLDER
     # We modify the help to add types so we store it twice to store old and new
     help: Optional[str] = None
     action: Optional[Union[str, Type[argparse.Action]]] = None
     choices: Optional[Union[List[str], List[Enum]]] = None
     has_converter: bool = False
+
+    @property
+    def display_type(self) -> Optional[Union[Type, Callable[[str], Any]]]:
+        default_type = self.type if self.type is not None else self.orig_type
+        return self.orig_type if self.has_converter else default_type
 
     def to_argparse(self) -> Tuple[List[str], Dict[str, Any]]:
         """Helper method to generate args and kwargs for Parser.add_argument."""
@@ -96,11 +103,10 @@ class ArgparseArg:
             "dest": self.id,
             "action": self.action,
             "help": self.help,
+            "default": self.default,
         }
-        if self.default is not ...:
-            kwargs["default"] = self.default
         # Support defaults for positional arguments
-        if not self.arg.option and self.default is not ...:
+        if not self.arg.option and self.default is not DEFAULT_PLACEHOLDER:
             kwargs["nargs"] = "?"
         # Not all arguments are valid for all options
         if self.type is not None:
@@ -115,32 +121,43 @@ def get_arg(
     orig_arg: Arg,
     param_type: Any,
     *,
-    default: Optional[Any] = ...,
+    orig_type: Optional[Union[Type, Callable[[str], Any]]] = None,
+    default: Optional[Any] = DEFAULT_PLACEHOLDER,
     get_converter: Optional[Callable[[Type], Optional[ConverterType]]] = None,
     skip_resolve: bool = False,
 ) -> ArgparseArg:
     """Generate an argument to add to argparse and interpret types if possible."""
-    arg = ArgparseArg(id=param, arg=orig_arg, type=param_type, help=orig_arg.help)
-    if default is not ...:
-        arg.default = default
+    arg = ArgparseArg(
+        id=param,
+        arg=orig_arg,
+        type=param_type,
+        help=orig_arg.help,
+        default=default,
+        orig_type=orig_type,
+    )
     if orig_arg.count:
         arg.action = "count"
         arg.type = None
         if not arg.default:
             arg.default = 0
         return arg
+    # Need to do this first so we can recursively resolve custom types like
+    # Union[ExistingPath] etc.
+    origin = get_origin(param_type)
+    args = get_args(param_type)
     converter = get_converter(param_type) if get_converter else None
+    if get_converter and not converter:
+        # Check if we have a converter for the origin, e.g. for generics Foo[Bar]
+        converter = get_converter(origin)  # type: ignore
     if converter:
         arg.type = converter
         arg.has_converter = True
         return arg
     if skip_resolve:
         return arg
-    # Need to do this first so we can recursively resolve custom types like
-    # Union[ExistingPath] etc.
-    origin = get_origin(param_type)
-    args = get_args(param_type)
-    if origin == Union:
+    if origin is Union:
+        if type(None) in args and default is DEFAULT_PLACEHOLDER:
+            default = None
         arg_types = [a for a in args if a != type(None)]  # noqa: E721
         if arg_types:
             return get_arg(
@@ -153,7 +170,7 @@ def get_arg(
     if param_type in BASE_TYPES:
         arg.type = param_type
         return arg
-    if param_type == bool:
+    if param_type is bool:
         if not orig_arg.option:
             raise InvalidArgumentError(
                 arg.id,
@@ -166,17 +183,17 @@ def get_arg(
         arg.action = "store_true"
         return arg
     if inspect.isclass(param_type) and issubclass(param_type, Enum):
-        arg.choices = list(param_type.__members__.values())
-        arg.type = lambda value: param_type.__members__.get(value, value)
+        arg.choices = list(param_type.__members__.keys())
+        arg.type = lambda value: getattr(param_type, value, value)
         return arg
     if not origin:
         raise UnsupportedTypeError(param, param_type)
-    if origin == Literal and len(args):
+    if origin is Literal and len(args):
         arg.choices = list(args)
         arg.type = type(args[0])
         return arg
     if origin in (list, IterableType):
-        if len(args) and get_origin(args[0]) == Literal:
+        if len(args) and get_origin(args[0]) is Literal:
             literal_args = get_args(args[0])
             if literal_args:
                 arg.type = type(literal_args[0])
@@ -228,7 +245,8 @@ def format_table(data: List[Tuple[str, str]]) -> str:
 
 def format_arg_help(text: Optional[str], max_width: int = 70) -> str:
     d = (text or "").strip()[:max_width]
-    return d.rsplit("." if "." in d else " ", 1)[0] + ("." if "." in d else "...")
+    end = "." if "." in d or len(text or "") <= max_width else "..."
+    return (d.rsplit(".", 1)[0] if "." in d else d) + end
 
 
 def convert_existing_path(path_str: str) -> Path:
