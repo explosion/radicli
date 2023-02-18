@@ -34,6 +34,7 @@ class Command:
 class Radicli:
     prog: Optional[str]
     help: Optional[str]
+    version: Optional[str]
     converters: ConvertersType
     extra_key: str
     commands: Dict[str, Command]
@@ -45,13 +46,15 @@ class Radicli:
         self,
         *,
         prog: Optional[str] = None,
-        help: Optional[str] = None,
+        help: str = "",
+        version: Optional[str] = None,
         converters: ConvertersType = SimpleFrozenDict(),
         extra_key: str = "_extra",
     ) -> None:
         """Initialize the CLI and create the registry."""
         self.prog = prog
         self.help = help
+        self.version = version
         self.converters = dict(DEFAULT_CONVERTERS)  # make sure to copy
         self.converters.update(converters)
         self.extra_key = extra_key
@@ -232,6 +235,8 @@ class Radicli:
             formatter_class=HelpFormatter,
             add_help=not any(a.arg.option == self._help_arg for a in arg_info),
         )
+        if self.version:
+            p.add_argument("--version", action="version", version=self.version)
         self._add_args(p, arg_info)
         subparsers: Dict[str, Tuple[ArgumentParser, Command]] = {}
         if subcommands:

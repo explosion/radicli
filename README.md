@@ -258,8 +258,9 @@ Internal representation of a CLI command. Can be accessed via `Radicli.commands`
 
 | Name          | Type                               | Description                                                                            |
 | ------------- | ---------------------------------- | -------------------------------------------------------------------------------------- |
-| `prog`        | `str`                              | Program name displayed in `--help` propmt usage examples, e.g. `"python -m spacy"`.    |
-| `help`        | `str`                              | Help text for the CLI, displayed in top-level `--help`.                                |
+| `prog`        | `Optional[str]`                    | Program name displayed in `--help` propmt usage examples, e.g. `"python -m spacy"`.    |
+| `help`        | `str`                              | Help text for the CLI, displayed in top-level `--help`. Defaults to `""`.              |
+| `version`     | `Optional[str]`                    | Version available via `--version`, if set.                                             |
 | `converters`  | `Dict[Type, Callable[[str], Any]]` | Dict mapping types to global converter functions.                                      |
 | `commands`    | `Dict[str, Command]`               | The commands added to the CLI, keyed by name.                                          |
 | `subcommands` | `Dict[str, Dict[str, Command]]`    | The subcommands added to the CLI, keyed by parent name, then keyed by subcommand name. |
@@ -277,7 +278,8 @@ cli = Radicli(prog="python -m spacy")
 | Argument     | Type                               | Description                                                                                                                                               |
 | ------------ | ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `prog`       | `Optional[str]`                    | Program name displayed in `--help` prompt usage examples, e.g. `"python -m spacy"`.                                                                       |
-| `help`       | `Optional[str]`                    | Help text for the CLI, displayed in top-level `--help`.                                                                                                   |
+| `help`       | `str`                              | Help text for the CLI, displayed in top-level `--help`. Defaults to `""`.                                                                                 |
+| `version`    | `Optional[str]`                    | Version available via `--version`, if set.                                                                                                                |
 | `converters` | `Dict[Type, Callable[[str], Any]]` | Dict mapping types to converter functions. All arguments with these types will then be passed to the respective converter.                                |
 | `extra_key`  | `str`                              | Name of function argument that receives extra arguments if the `command_with_extra` or `subcommand_with_extra` decorator is used. Defaults to `"_extra"`. |
 

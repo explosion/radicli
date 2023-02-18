@@ -602,6 +602,24 @@ def test_cli_custom_help_arg():
 
 
 def test_single_command():
+def test_cli_version(capsys):
+    version = "1.2.3"
+    cli = Radicli(version=version)
+    ran = False
+
+    @cli.command("test", a=Arg("--a"))
+    def test(a: str):
+        assert a == "hello"
+        nonlocal ran
+        ran = True
+
+    with pytest.raises(SystemExit):
+        cli.run(["", "--version"])
+    captured = capsys.readouterr()
+    assert captured.out.strip() == version
+    cli.run(["", "test", "--a", "hello"])
+    assert ran
+
     """Test that the name can be left out for CLIs with only one command."""
     cli = Radicli()
     ran = False
