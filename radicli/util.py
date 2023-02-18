@@ -76,12 +76,18 @@ class ArgparseArg:
     id: str
     arg: Arg
     type: Optional[Union[Type, Callable[[str], Any]]] = None
+    orig_type: Optional[Union[Type, Callable[[str], Any]]] = None
     default: Any = DEFAULT_PLACEHOLDER
     # We modify the help to add types so we store it twice to store old and new
     help: Optional[str] = None
     action: Optional[Union[str, Type[argparse.Action]]] = None
     choices: Optional[Union[List[str], List[Enum]]] = None
     has_converter: bool = False
+
+    @property
+    def display_type(self) -> Optional[Union[Type, Callable[[str], Any]]]:
+        default_type = self.type if self.type is not None else self.orig_type
+        return self.orig_type if self.has_converter else default_type
 
     def to_argparse(self) -> Tuple[List[str], Dict[str, Any]]:
         """Helper method to generate args and kwargs for Parser.add_argument."""
@@ -112,13 +118,20 @@ def get_arg(
     orig_arg: Arg,
     param_type: Any,
     *,
+    orig_type: Optional[Union[Type, Callable[[str], Any]]] = None,
     default: Optional[Any] = DEFAULT_PLACEHOLDER,
     get_converter: Optional[Callable[[Type], Optional[ConverterType]]] = None,
     skip_resolve: bool = False,
 ) -> ArgparseArg:
     """Generate an argument to add to argparse and interpret types if possible."""
-    arg = ArgparseArg(id=param, arg=orig_arg, type=param_type, help=orig_arg.help)
-    arg.default = default
+    arg = ArgparseArg(
+        id=param,
+        arg=orig_arg,
+        type=param_type,
+        help=orig_arg.help,
+        default=default,
+        orig_type=orig_type,
+    )
     if orig_arg.count:
         arg.action = "count"
         arg.type = None

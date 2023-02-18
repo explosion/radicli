@@ -167,13 +167,12 @@ class Radicli:
                 param,
                 arg_info,
                 arg_type,
+                orig_type=param_type,
                 default=sig_defaults[param],
                 skip_resolve=converter is not None,
                 get_converter=get_converter,
             )
-            has_converter = converter is not None or arg.has_converter
-            display_type = param_type if has_converter else arg_type
-            arg.help = join_strings(arg.help, f"({format_type(display_type)})")
+            arg.help = join_strings(arg.help, f"({format_type(arg.display_type)})")
             cli_args.append(arg)
         return Command(
             name=name,
