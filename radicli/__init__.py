@@ -53,7 +53,7 @@ class Radicli:
     ) -> None:
         """Initialize the CLI and create the registry."""
         self.prog = prog
-        self.help = help
+        self.help = help.strip()
         self.version = version
         self.converters = dict(DEFAULT_CONVERTERS)  # make sure to copy
         self.converters.update(converters)
@@ -309,5 +309,5 @@ class Radicli:
             if name not in self.commands:
                 col = f"Subcommands: {', '.join(self.subcommands[name])}"
                 data.append((f"  {name}", col))
-        info = [self.help, "Available commands:", format_table(data)]
+        info = [self.help + "\n", "Available commands:", format_table(data)]
         return join_strings(*info, char="\n")

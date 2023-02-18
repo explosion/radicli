@@ -228,7 +228,8 @@ def format_table(data: List[Tuple[str, str]]) -> str:
 
 def format_arg_help(text: Optional[str], max_width: int = 70) -> str:
     d = (text or "").strip()[:max_width]
-    return d.rsplit("." if "." in d else " ", 1)[0] + ("." if "." in d else "...")
+    end = "." if "." in d or len(text) <= max_width else "..."
+    return (d.rsplit(".", 1)[0] if "." in d else d) + end
 
 
 def convert_existing_path(path_str: str) -> Path:
