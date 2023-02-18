@@ -1,11 +1,10 @@
 from typing import Any, Callable, Iterable, Type, Union, Optional, Dict, Tuple
-from typing import List, Literal, NewType, get_args, get_origin, Set
+from typing import List, Literal, NewType, get_args, get_origin
 from enum import Enum
 from dataclasses import dataclass
 from pathlib import Path
 import inspect
 import argparse
-import sys
 
 # We need this Iterable type, which is the type origin of types.Iterable
 try:
@@ -247,6 +246,19 @@ def format_arg_help(text: Optional[str], max_width: int = 70) -> str:
     d = (text or "").strip()[:max_width]
     end = "." if "." in d or len(text or "") <= max_width else "..."
     return (d.rsplit(".", 1)[0] if "." in d else d) + end
+
+
+def expand_error_subclasses(
+    errors: Dict[Type[Exception], ErrorHandlerType]
+) -> Dict[Type[Exception], ErrorHandlerType]:
+    """Map subclasses of errors to their parent's handler."""
+    output = {}
+    for err, callback in errors.items():
+        if hasattr(err, "__subclasses__"):
+            for subclass in err.__subclasses__():
+                output[subclass] = callback
+        output[err] = callback
+    return output
 
 
 def convert_existing_path(path_str: str) -> Path:

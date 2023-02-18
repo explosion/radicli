@@ -1,19 +1,19 @@
-from typing import Any, Callable, Dict, List, Optional, Type, TypeVar, Tuple, cast, Set
+from typing import Any, Callable, Dict, List, Optional, Type, TypeVar, Tuple, cast
 import sys
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from inspect import signature
 
 from .parser import ArgumentParser, HelpFormatter
 from .util import Arg, ArgparseArg, get_arg, join_strings, format_type, format_table
-from .util import format_arg_help, SimpleFrozenDict, CommandNotFoundError
-from .util import CliParserError, CommandExistsError, ConvertersType
+from .util import format_arg_help, expand_error_subclasses, SimpleFrozenDict
+from .util import CommandNotFoundError, CliParserError, CommandExistsError
+from .util import ConvertersType, ErrorHandlersType
 from .util import DEFAULT_CONVERTERS, DEFAULT_PLACEHOLDER
 
 # Make available for import
 from .util import ExistingPath, ExistingFilePath, ExistingDirPath  # noqa: F401
 from .util import ExistingPathOrDash, ExistingFilePathOrDash, PathOrDash  # noqa: F401
 from .util import ExistingDirPathOrDash  # noqa: F401
-from .util import ErrorHandlersType, ErrorHandlerType
 
 
 _CallableT = TypeVar("_CallableT", bound=Callable)
@@ -233,12 +233,10 @@ class Radicli:
             )
             sub = values.pop(self._subcommand_key, None)
             func = subcommands[sub].func if sub else cmd.func
-            # Catch specific error types (and their subclasses),
-            # and invoke their handler callback. Handlers
-            # can return an integer exit code, which will
-            # be passed to sys.exit. If the handler returns
-            # None, the program doesn't exit (useful for testing)
-            errors_map = _expand_error_subclasses(self.errors)
+            # Catch specific error types (and their subclasses), and invoke
+            # their handler callback. Handlers can return an integer exit code,
+            # which will be passed to sys.exit.
+            errors_map = expand_error_subclasses(self.errors)
             try:
                 func(**values)
             except tuple(errors_map.keys()) as e:
@@ -350,16 +348,3 @@ class Radicli:
                 data.append((f"  {name}", col))
         info = [self.help, "\nAvailable commands:", format_table(data)]
         return join_strings(*info, char="\n")
-
-
-def _expand_error_subclasses(
-    errors: Dict[Type[Exception], ErrorHandlerType]
-) -> Dict[Type[Exception], ErrorHandlerType]:
-    # Map subclasses of errors to their parent's handler.
-    output = {}
-    for err, callback in errors.items():
-        if hasattr(err, "__subclasses__"):
-            for subclass in err.__subclasses__():
-                output[subclass] = callback
-        output[err] = callback
-    return output
