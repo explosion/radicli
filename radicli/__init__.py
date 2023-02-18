@@ -280,7 +280,8 @@ class Radicli:
         values = {**vars(namespace), self.extra_key: extra}
         sub_key = values.pop(self._subcommand_key, None)
         if not sub_key:  # we're not in a subcommand
-            return self._validate(self.commands.get(name), values, allow_extra)
+            cmds = self.commands[name] if name in self.commands else None
+            return self._validate(cmds, values, allow_extra)
         if sub_key not in subparsers:
             raise CliParserError(f"invalid subcommand: '{sub_key}'")
         subparser, subcmd = subparsers[cast(str, sub_key)]
@@ -332,5 +333,5 @@ class Radicli:
             if name not in self.commands:
                 col = f"Subcommands: {', '.join(self.subcommands[name])}"
                 data.append((f"  {name}", col))
-        info = [self.help + "\n", "Available commands:", format_table(data)]
+        info = [self.help, "\nAvailable commands:", format_table(data)]
         return join_strings(*info, char="\n")
