@@ -1,5 +1,5 @@
 from typing import Any, Callable, Iterable, Type, Union, Optional, Dict, Tuple
-from typing import List, Literal, NewType, get_args, get_origin
+from typing import List, Literal, NewType, get_args, get_origin, TypeVar
 from enum import Enum
 from dataclasses import dataclass
 from pathlib import Path
@@ -17,8 +17,9 @@ DEFAULT_PLACEHOLDER = argparse.SUPPRESS
 BASE_TYPES = [str, int, float, Path]
 ConverterType = Callable[[str], Any]
 ConvertersType = Dict[Union[Type, object], ConverterType]
+_Exc = TypeVar("_Exc", bound=Exception, covariant=True)
 ErrorHandlerType = Callable[[Exception], Optional[int]]
-ErrorHandlersType = Dict[Type[Exception], ErrorHandlerType]
+ErrorHandlersType = Dict[Type[_Exc], Callable[[_Exc], Optional[int]]]
 
 
 class CliParserError(SystemExit):
