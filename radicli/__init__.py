@@ -7,13 +7,13 @@ from .parser import ArgumentParser, HelpFormatter
 from .util import Arg, ArgparseArg, get_arg, join_strings, format_type, format_table
 from .util import format_arg_help, expand_error_subclasses, SimpleFrozenDict
 from .util import CommandNotFoundError, CliParserError, CommandExistsError
-from .util import ConvertersType, ErrorHandlersType
+from .util import ConverterType, ConvertersType, ErrorHandlersType
 from .util import DEFAULT_CONVERTERS, DEFAULT_PLACEHOLDER
 
 # Make available for import
-from .util import ExistingPath, ExistingFilePath, ExistingDirPath  # noqa: F401
-from .util import ExistingPathOrDash, ExistingFilePathOrDash, PathOrDash  # noqa: F401
-from .util import ExistingDirPathOrDash  # noqa: F401
+from .util import ExistingPath, ExistingFilePath, ExistingDirPath
+from .util import ExistingPathOrDash, ExistingFilePathOrDash, PathOrDash
+from .util import ExistingDirPathOrDash
 
 
 _CallableT = TypeVar("_CallableT", bound=Callable)
@@ -166,7 +166,7 @@ class Radicli:
                 err = f"argument not found in function for '{path}': {param}"
                 raise CliParserError(err)
 
-            def get_converter(arg_type: Type) -> Optional[Callable[[str], Any]]:
+            def get_converter(arg_type: Type) -> Optional[ConverterType]:
                 return self.converters.get(arg_type, arg_info.converter)
 
             param_type = sig_types[param]
@@ -358,3 +358,15 @@ class Radicli:
                 data.append((f"  {name}", col))
         info = [self.help, "\nAvailable commands:", format_table(data)]
         return join_strings(*info, char="\n")
+
+
+# fmt: off
+__all__ = [
+    "Radicli", "ArgumentParser", "HelpFormatter", "Command", "Arg", "ArgparseArg",
+    "get_arg", "format_type", "CommandNotFoundError", "CliParserError",
+    "CommandExistsError", "ConvertersType", "ConverterType", "ErrorHandlersType",
+    "DEFAULT_PLACEHOLDER", "ExistingPath", "ExistingFilePath", "ExistingDirPath",
+    "ExistingPathOrDash", "ExistingFilePathOrDash", "PathOrDash",
+    "ExistingDirPathOrDash"
+]
+# fmt: on
