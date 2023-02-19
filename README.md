@@ -280,7 +280,7 @@ class CustomError(Exception):
 
 def handle_custom_error(error: CustomError) -> int:
     print(colored(error.text, "red"))
-    print(error.additiona_info)
+    print(error.additional_info)
     return 1
 ```
 
