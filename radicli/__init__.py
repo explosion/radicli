@@ -27,6 +27,7 @@ class Command:
     description: Optional[str] = None
     allow_extra: bool = False
     parent: Optional[str] = None
+    is_placeholder: bool = False
 
     @property
     def display_name(self) -> str:
@@ -201,7 +202,9 @@ class Radicli:
             # If this runs, we want to show the help instead of doing nothing
             self.parse(["--help"], [], subcommands, name=name, description=description)
 
-        dummy = Command(name=name, func=func, args=[], description=description)
+        dummy = Command(
+            name=name, func=func, args=[], description=description, is_placeholder=True
+        )
         self.commands[name] = dummy
 
     def run(self, args: Optional[List[str]] = None) -> None:
