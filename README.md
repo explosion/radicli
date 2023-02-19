@@ -186,6 +186,16 @@ def convert_existing_path(path_str: str) -> Path:
 converters = {ExistingPath: convert_existing_path}
 ```
 
+For generic types that can have arguments, e.g. `List` and `List[str]`, the converters are checked for both the exact type, as well as the origin. This means you can have multiple converters for different generics, as well as a fallback:
+
+```
+converters = {
+    List[str]: convert_string_list,
+    List[int]: convert_int_list,
+    List: convert_other_lists,
+}
+```
+
 ### Allowing extra arguments
 
 If you want to capture and consume extra arguments not defined in the function and argument annotations, you can use the `command_with_extra` or `subcommand_with_extra` decorators. Extra arguments are passed to the function as a list of strings to an argument `_extra` (which you can change via the `extra_key` setting when initializing the CLI). spaCy uses this feature to pass settings to `pip` in its [`download` command](https://spacy.io/api/cli#download) or to allow arbitrary [configuration overrides](https://spacy.io/usage/training#config-overrides) during training.
