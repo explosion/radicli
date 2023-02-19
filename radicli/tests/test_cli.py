@@ -642,6 +642,30 @@ def test_cli_version(capsys):
     assert ran
 
 
+def test_cli_version_multiple_commands(capsys):
+    # Test --version also works on the top-level with no command specified
+    version = "1.2.3"
+    cli = Radicli(version=version)
+    ran1 = False
+    ran2 = False
+
+    @cli.command("test1", a=Arg("--a"))
+    def test1(a: str):
+        nonlocal ran1
+        ran1 = True
+
+    @cli.command("test2", a=Arg("--a"))
+    def test2(a: str):
+        nonlocal ran2
+        ran2 = True
+
+    with pytest.raises(SystemExit):
+        cli.run(["", "--version"])
+    captured = capsys.readouterr()
+    assert captured.out.strip() == version
+    assert not ran1
+    assert not ran2
+
 def test_cli_single_command():
     """Test that the name can be left out for CLIs with only one command."""
     cli = Radicli()

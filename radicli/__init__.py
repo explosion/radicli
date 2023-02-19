@@ -44,6 +44,7 @@ class Radicli:
     errors: ErrorHandlersType
     _subcommand_key: str
     _help_arg: str
+    _version_arg: str
 
     def __init__(
         self,
@@ -67,6 +68,7 @@ class Radicli:
         self.errors = dict(errors) if errors is not None else {}
         self._subcommand_key = "__subcommand__"  # should not conflict with arg name!
         self._help_arg = "--help"
+        self._version_arg = "--version"
 
     # Using underscored argument names here to prevent conflicts if CLI commands
     # define arguments called "name" that are passed in via **args
@@ -218,6 +220,9 @@ class Radicli:
                     run_args.insert(1, single_cmd)
             command = run_args.pop(1)
             args = run_args[1:]
+            if self.version and command == self._version_arg:
+                print(self.version)
+                sys.exit(0)
             subcommands = self.subcommands.get(command, {})
             if command not in self.commands:
                 if not subcommands:
@@ -266,7 +271,7 @@ class Radicli:
             argument_default=DEFAULT_PLACEHOLDER,
         )
         if self.version:
-            p.add_argument("--version", action="version", version=self.version)
+            p.add_argument(self._version_arg, action="version", version=self.version)
         self._add_args(p, arg_info)
         subparsers: Dict[str, Tuple[ArgumentParser, Command]] = {}
         if subcommands:
