@@ -2,7 +2,7 @@
 
 # radicli: Radically lightweight command-line interfaces
 
-`radicli` is a small, zero-dependency Python package for creating command line interfaces, built on top of Python's [`argparse`](https://docs.python.org/3/library/argparse.html) module. It introduces minimal overhead, preserves your original Python functions and uses type hints to parse values provided on the CLI. It supports all common types out-of-the-box, including complex ones like `List[str]`, `Literal` and `Enum`, and allows registering custom types with custom converters.
+`radicli` is a small, zero-dependency Python package for creating command line interfaces, built on top of Python's [`argparse`](https://docs.python.org/3/library/argparse.html) module. It introduces minimal overhead, preserves your original Python functions and uses type hints to parse values provided on the CLI. It supports all common types out-of-the-box, including complex ones like `List[str]`, `Literal` and `Enum`, and allows registering custom types with custom converters, as well as custom CLI-only error handling.
 
 > **Important note:** This package aims to be a simple option based on the requirements of our libraries. If you're looking for a more full-featured CLI toolkit, check out [`typer`](https://typer.tiangolo.com), [`click`](https://click.palletsprojects.com) or [`plac`](https://plac.readthedocs.io/en/latest/).
 
@@ -224,6 +224,56 @@ $ python cli.py hey --name Alex --age 35
 $ python cli.py greet person --name Alex --age 35
 ```
 
+### Error handling
+
+One common problem when adding CLIs to a code base is error handling. When called in a CLI context, you typically want to pretty-print any errors and avoid long tracebacks. However, you don't want to use those errors and plain `SystemExit`s with no traceback in helper functions that are used in other places, or when the CLI functions are called directly from Python or during testing.
+
+To solve this, `radicli` lets you provide an error map via the `errors` argument on initialization. It maps `Exception` types like `ValueError` or fully custom error subclasses to handler functions. If an error of that type is raised, the handler is called and will receive the error. The handler can optionally return an exit code – in this case, `radicli` will perform a `sys.exit` using that code. If no error code is returned, no exit is performed and the handler can either take care of the exiting itself or choose to not exit.
+
+```python
+from radicli import Radicli
+from termcolor import colored
+
+def pretty_print_error(error: Exception) -> int:
+    print(colored(f"🚨 {error}", "red"))
+    return 1
+
+cli = Radicli(errors={ValueError: handle_error})
+
+@cli.command("hello", name=Arg("--name"))
+def hello(name: str):
+    if name == "Alex":
+        raise ValueError("Invalid name")
+```
+
+```
+$ python cli.py hello --name Alex
+🚨 Invalid name
+```
+
+```bash
+>>> hello("Alex")
+Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+ValueError: Invalid name
+```
+
+This approach is especially powerful with custom error subclasses. Here you can decide which arguments the error should take and how this information should be displayed on the CLI vs. in a regular non-CLI context.
+
+```python
+class CustomError(Exception):
+    def __init__(self, text: str, additional_info: Any = "") -> None:
+        self.text = text
+        self.additional_info
+        self.message = f"{self.text} {self.additional_info}"
+        super().__init__(self.message)
+
+def handle_custom_error(error: CustomError) -> int:
+    print(colored(error.text, "red"))
+    print(error.additiona_info)
+    return 1
+```
+
 ## 🎛 API
 
 ### <kbd>dataclass</kbd> `Arg`
@@ -256,14 +306,15 @@ Internal representation of a CLI command. Can be accessed via `Radicli.commands`
 
 #### Attributes
 
-| Name          | Type                               | Description                                                                            |
-| ------------- | ---------------------------------- | -------------------------------------------------------------------------------------- |
-| `prog`        | `Optional[str]`                    | Program name displayed in `--help` prompt usage examples, e.g. `"python -m spacy"`.    |
-| `help`        | `str`                              | Help text for the CLI, displayed in top-level `--help`. Defaults to `""`.              |
-| `version`     | `Optional[str]`                    | Version available via `--version`, if set.                                             |
-| `converters`  | `Dict[Type, Callable[[str], Any]]` | Dict mapping types to global converter functions.                                      |
-| `commands`    | `Dict[str, Command]`               | The commands added to the CLI, keyed by name.                                          |
-| `subcommands` | `Dict[str, Dict[str, Command]]`    | The subcommands added to the CLI, keyed by parent name, then keyed by subcommand name. |
+| Name          | Type                                                          | Description                                                                                                                                                                              |
+| ------------- | ------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `prog`        | `Optional[str]`                                               | Program name displayed in `--help` prompt usage examples, e.g. `"python -m spacy"`.                                                                                                      |
+| `help`        | `str`                                                         | Help text for the CLI, displayed in top-level `--help`. Defaults to `""`.                                                                                                                |
+| `version`     | `Optional[str]`                                               | Version available via `--version`, if set.                                                                                                                                               |
+| `converters`  | `Dict[Type, Callable[[str], Any]]`                            | Dict mapping types to global converter functions.                                                                                                                                        |
+| `errors`      | `Dict[Type[Exception], Callable[[Exception], Optional[int]]]` | Dict mapping errors types to global error handlers. If the handler returns an exit code, a `sys.exit` will be raised using that code. See [error handling](#error-handling) for details. |
+| `commands`    | `Dict[str, Command]`                                          | The commands added to the CLI, keyed by name.                                                                                                                                            |
+| `subcommands` | `Dict[str, Dict[str, Command]]`                               | The subcommands added to the CLI, keyed by parent name, then keyed by subcommand name.                                                                                                   |
 
 #### <kbd>method</kbd> `Radicli.__init__`
 
@@ -275,13 +326,14 @@ from radicli import Radicli
 cli = Radicli(prog="python -m spacy")
 ```
 
-| Argument     | Type                               | Description                                                                                                                                               |
-| ------------ | ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `prog`       | `Optional[str]`                    | Program name displayed in `--help` prompt usage examples, e.g. `"python -m spacy"`.                                                                       |
-| `help`       | `str`                              | Help text for the CLI, displayed in top-level `--help`. Defaults to `""`.                                                                                 |
-| `version`    | `Optional[str]`                    | Version available via `--version`, if set.                                                                                                                |
-| `converters` | `Dict[Type, Callable[[str], Any]]` | Dict mapping types to converter functions. All arguments with these types will then be passed to the respective converter.                                |
-| `extra_key`  | `str`                              | Name of function argument that receives extra arguments if the `command_with_extra` or `subcommand_with_extra` decorator is used. Defaults to `"_extra"`. |
+| Argument     | Type                                                          | Description                                                                                                                                                                              |
+| ------------ | ------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `prog`       | `Optional[str]`                                               | Program name displayed in `--help` prompt usage examples, e.g. `"python -m spacy"`.                                                                                                      |
+| `help`       | `str`                                                         | Help text for the CLI, displayed in top-level `--help`. Defaults to `""`.                                                                                                                |
+| `version`    | `Optional[str]`                                               | Version available via `--version`, if set.                                                                                                                                               |
+| `converters` | `Dict[Type, Callable[[str], Any]]`                            | Dict mapping types to converter functions. All arguments with these types will then be passed to the respective converter.                                                               |
+| `errors`     | `Dict[Type[Exception], Callable[[Exception], Optional[int]]]` | Dict mapping errors types to global error handlers. If the handler returns an exit code, a `sys.exit` will be raised using that code. See [error handling](#error-handling) for details. |
+| `extra_key`  | `str`                                                         | Name of function argument that receives extra arguments if the `command_with_extra` or `subcommand_with_extra` decorator is used. Defaults to `"_extra"`.                                |
 
 #### <kbd>decorator</kbd> `Radicli.command`, `Radicli.command_with_extra`
 
