@@ -5,8 +5,9 @@ from inspect import signature
 
 from .parser import ArgumentParser, HelpFormatter
 from .util import Arg, ArgparseArg, get_arg, join_strings, format_type, format_table
-from .util import format_arg_help, SimpleFrozenDict, CommandNotFoundError
-from .util import CliParserError, CommandExistsError, ConvertersType
+from .util import format_arg_help, expand_error_subclasses, SimpleFrozenDict
+from .util import CommandNotFoundError, CliParserError, CommandExistsError
+from .util import ConvertersType, ErrorHandlersType
 from .util import DEFAULT_CONVERTERS, DEFAULT_PLACEHOLDER
 
 # Make available for import
@@ -40,6 +41,7 @@ class Radicli:
     extra_key: str
     commands: Dict[str, Command]
     subcommands: Dict[str, Dict[str, Command]]
+    errors: ErrorHandlersType
     _subcommand_key: str
     _help_arg: str
 
@@ -50,6 +52,7 @@ class Radicli:
         help: str = "",
         version: Optional[str] = None,
         converters: ConvertersType = SimpleFrozenDict(),
+        errors: Optional[ErrorHandlersType] = None,
         extra_key: str = "_extra",
     ) -> None:
         """Initialize the CLI and create the registry."""
@@ -61,6 +64,7 @@ class Radicli:
         self.extra_key = extra_key
         self.commands = {}
         self.subcommands = {}
+        self.errors = dict(errors) if errors is not None else {}
         self._subcommand_key = "__subcommand__"  # should not conflict with arg name!
         self._help_arg = "--help"
 
@@ -231,7 +235,17 @@ class Radicli:
             )
             sub = values.pop(self._subcommand_key, None)
             func = subcommands[sub].func if sub else cmd.func
-            func(**values)
+            # Catch specific error types (and their subclasses), and invoke
+            # their handler callback. Handlers can return an integer exit code,
+            # which will be passed to sys.exit.
+            errors_map = expand_error_subclasses(self.errors)
+            try:
+                func(**values)
+            except tuple(errors_map.keys()) as e:
+                handler = errors_map[e.__class__]
+                err_code = handler(e)
+                if err_code is not None:
+                    sys.exit(err_code)
 
     def parse(
         self,

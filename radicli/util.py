@@ -17,6 +17,8 @@ DEFAULT_PLACEHOLDER = argparse.SUPPRESS
 BASE_TYPES = [str, int, float, Path]
 ConverterType = Callable[[str], Any]
 ConvertersType = Dict[Union[Type, object], ConverterType]
+ErrorHandlerType = Callable[[Exception], Optional[int]]
+ErrorHandlersType = Dict[Type[Exception], ErrorHandlerType]
 
 
 class CliParserError(SystemExit):
@@ -244,6 +246,19 @@ def format_arg_help(text: Optional[str], max_width: int = 70) -> str:
     d = (text or "").strip()[:max_width]
     end = "." if "." in d or len(text or "") <= max_width else "..."
     return (d.rsplit(".", 1)[0] if "." in d else d) + end
+
+
+def expand_error_subclasses(
+    errors: Dict[Type[Exception], ErrorHandlerType]
+) -> Dict[Type[Exception], ErrorHandlerType]:
+    """Map subclasses of errors to their parent's handler."""
+    output = {}
+    for err, callback in errors.items():
+        if hasattr(err, "__subclasses__"):
+            for subclass in err.__subclasses__():
+                output[subclass] = callback
+        output[err] = callback
+    return output
 
 
 def convert_existing_path(path_str: str) -> Path:
