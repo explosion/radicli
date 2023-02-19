@@ -155,7 +155,9 @@ class Radicli:
         cli_args = []
         for param, arg_info in args.items():
             if param not in sig_types:  # unknown argument
-                raise CliParserError(f"argument not found in function: {param}")
+                path = join_strings(parent, name)
+                err = f"argument not found in function for '{path}': {param}"
+                raise CliParserError(err)
 
             def get_converter(arg_type: Type) -> Optional[Callable[[str], Any]]:
                 return self.converters.get(arg_type, arg_info.converter)
