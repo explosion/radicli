@@ -255,13 +255,27 @@ def format_arg_help(text: Optional[str], max_width: int = 70) -> str:
     return (d.rsplit(".", 1)[0] if "." in d else d) + end
 
 
+def print_static_help(
+    path: Optional[Union[str, Path]],
+    cmd: Optional[str] = None,
+    sub: Optional[str] = None,
+) -> bool:
+    if not path or not Path(path).exists() or not Path(path).is_file():
+        return False
+    with Path(path).open("r", encoding="utf8") as f:
+        data = json.load(f)
+    static = get_static_help(data, cmd, sub)
+    if static:
+        print(static)
+        return True
+    return False
+
+
 def get_static_help(
-    file_path: Union[str, Path],
+    data: Dict[str, Any],
     cmd: Optional[str] = None,
     sub: Optional[str] = None,
 ) -> Optional[str]:
-    with Path(file_path).open("r", encoding="utf8") as f:
-        data = json.load(f)
     if not cmd:
         return data[STATIC_ROOT_KEY]
     if cmd and cmd not in data[STATIC_CMD_KEY]:
