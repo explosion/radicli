@@ -114,6 +114,37 @@ class ArgparseArg:
             kwargs["choices"] = self.choices
         return args, kwargs
 
+    def to_static_json(self) -> Dict[str, Any]:
+        """Convert the argument to a JSON-serializable dict."""
+        return {
+            "id": self.id,
+            "option": self.arg.option,
+            "short": self.arg.short,
+            "orig_help": self.arg.help,
+            "default": str(self.default),
+            "help": self.help,
+            "action": str(self.action) if self.action else None,
+            "choices": list(self.choices) if self.choices else None,
+            "has_converter": self.has_converter,
+        }
+
+    @classmethod
+    def from_static_json(cls, data: Dict[str, Any]) -> "ArgparseArg":
+        """Initialize the static argument from a JSON-serializable dict."""
+        return ArgparseArg(
+            id=data["id"],
+            arg=Arg(data["option"], data["short"], help=data["orig_help"]),
+            type=str if not data["action"] else None,  # dummy, not used
+            orig_type=str if not data["action"] else None,  # dummy, not used
+            default=DEFAULT_PLACEHOLDER
+            if data["default"] == DEFAULT_PLACEHOLDER
+            else data["default"],
+            help=data["help"],
+            action=data["action"],
+            choices=data["choices"],
+            has_converter=data["has_converter"],
+        )
+
 
 def get_arg(
     param: str,

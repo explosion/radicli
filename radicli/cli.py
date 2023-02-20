@@ -31,6 +31,30 @@ class Command:
     def display_name(self) -> str:
         return f"{self.parent} {self.name}" if self.parent else self.name
 
+    def to_static_json(self) -> Dict[str, Any]:
+        """Convert the command to a JSON-serializable dict."""
+        return {
+            "name": self.name,
+            "args": [arg.to_static_json() for arg in self.args],
+            "description": self.description,
+            "allow_extra": self.allow_extra,
+            "parent": self.parent,
+            "is_placeholder": self.is_placeholder,
+        }
+
+    @classmethod
+    def from_static_json(cls, data: Dict[str, Any]) -> "Command":
+        """Initialize the static command from a JSON-serializable dict."""
+        return cls(
+            name=data["name"],
+            func=lambda *args, **kwargs: None,  # dummy function for static use
+            args=[ArgparseArg.from_static_json(arg) for arg in data["args"]],
+            description=data["description"],
+            allow_extra=data["allow_extra"],
+            parent=data["parent"],
+            is_placeholder=data["is_placeholder"],
+        )
+
 
 class Radicli:
     prog: Optional[str]
@@ -371,51 +395,26 @@ class Radicli:
         info = [self.help, "\nAvailable commands:", format_table(data)]
         return join_strings(*info, char="\n")
 
+    def to_static_json(self) -> Dict[str, Any]:
+        """Convert the CLI to a JSON-serializable dict."""
+        return {
+            "prog": self.prog,
+            "help": self.help,
+            "version": self.version,
+            "extra_key": self.extra_key,
+            "commands": {
+                cmd.name: cmd.to_static_json() for cmd in self.commands.values()
+            },
+            "subcommands": {
+                parent: {sub.name: sub.to_static_json() for sub in subs.values()}
+                for parent, subs in self.subcommands.items()
+            },
+        }
+
     def to_static(self, path: Union[str, Path]) -> Path:
-        data = cli_to_json(self)
+        """Generate a static representation of the CLI for StaticRadicli."""
+        data = self.to_static_json()
         path = Path(path)
         with path.open("w", encoding="utf8") as f:
             f.write(json.dumps(data))
         return path
-
-
-def cli_to_json(cli: Radicli) -> Dict[str, Any]:
-    return {
-        "prog": cli.prog,
-        "help": cli.help,
-        "version": cli.version,
-        "extra_key": cli.extra_key,
-        "commands": {cmd.name: cmd_to_json(cmd) for cmd in cli.commands.values()},
-        "subcommands": {
-            parent: {sub.name: cmd_to_json(sub) for sub in subs.values()}
-            for parent, subs in cli.subcommands.items()
-        },
-    }
-
-
-def cmd_to_json(cmd: Command) -> Dict[str, Any]:
-    return {
-        "name": cmd.name,
-        "args": args_to_json(cmd.args),
-        "description": cmd.description,
-        "allow_extra": cmd.allow_extra,
-        "parent": cmd.parent,
-        "is_placeholder": cmd.is_placeholder,
-    }
-
-
-def args_to_json(args: List[ArgparseArg]) -> List[Dict[str, Any]]:
-    data = []
-    for arg in args:
-        arg_data = {
-            "id": arg.id,
-            "option": arg.arg.option,
-            "short": arg.arg.short,
-            "default": str(arg.default),
-            "help": arg.help,
-            "action": str(arg.action) if arg.action else None,
-            "choices": list(arg.choices) if arg.choices else None,
-            "has_converter": arg.has_converter,
-        }
-        data.append(arg_data)
-    return data

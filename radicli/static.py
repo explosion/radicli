@@ -24,51 +24,27 @@ class StaticRadicli(Radicli):
             extra_key=data["extra_key"],
         )
         self.commands = {
-            name: cmd_from_json(cmd) for name, cmd in data["commands"].items()
+            name: Command.from_static_json(cmd)
+            for name, cmd in data["commands"].items()
         }
         self.subcommands = {
-            parent: {name: cmd_from_json(sub) for name, sub in subs.items()}
+            parent: {name: Command.from_static_json(sub) for name, sub in subs.items()}
             for parent, subs in data["subcommands"].items()
         }
         self.path = path
         self.data = data
         self.debug = debug
+        self._debug_start = "===== STATIC ====="
+        self._debug_end = "=== END STATIC ==="
 
     def run(self, args: Optional[List[str]] = None):
+        """
+        Run the static CLI. Should usually happen before importing and running
+        the live CLI so the static CLI can show help or raise errors and
+        exit, without requiring importing the live CLI.
+        """
         if self.debug:
-            print("===== STATIC =====")
+            print(self._debug_start)
         super().run(args)
         if self.debug:
-            print("=== END STATIC ===")
-
-
-def cmd_from_json(data: Dict[str, Any]) -> "Command":
-    return Command(
-        name=data["name"],
-        func=lambda *args, **kwargs: None,
-        args=args_from_json(data["args"]),
-        description=data["description"],
-        allow_extra=data["allow_extra"],
-        parent=data["parent"],
-        is_placeholder=data["is_placeholder"],
-    )
-
-
-def args_from_json(data: List[Dict[str, Any]]) -> List[ArgparseArg]:
-    args = []
-    for arg in data:
-        ap_arg = ArgparseArg(
-            id=arg["id"],
-            arg=Arg(arg["option"], arg["short"]),
-            type=str if not arg["action"] else None,
-            orig_type=str if not arg["action"] else None,
-            default=DEFAULT_PLACEHOLDER
-            if arg["default"] == DEFAULT_PLACEHOLDER
-            else arg["default"],
-            help=arg["help"],
-            action=arg["action"],
-            choices=arg["choices"],
-            has_converter=arg["has_converter"],
-        )
-        args.append(ap_arg)
-    return args
+            print(self._debug_end)

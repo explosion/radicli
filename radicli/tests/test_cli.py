@@ -1,24 +1,16 @@
-from typing import List, Iterator, Optional, Literal, TypeVar, Generic, Type
+from typing import List, Optional, Literal, TypeVar, Generic, Type
 from enum import Enum
 from dataclasses import dataclass
 import pytest
 import sys
-from contextlib import contextmanager
-import tempfile
-import shutil
+
 from pathlib import Path
 from radicli import Radicli, Arg
 from radicli.util import CommandNotFoundError, CliParserError
 from radicli.util import ExistingPath, ExistingFilePath, ExistingDirPath
 from radicli.util import ExistingFilePathOrDash
 
-
-@contextmanager
-def make_tempdir() -> Iterator[Path]:
-    """Run a block in a temp directory and remove it afterwards."""
-    d = Path(tempfile.mkdtemp())
-    yield d
-    shutil.rmtree(str(d))
+from .util import make_tempdir
 
 
 def test_cli_sys_argv():
@@ -665,6 +657,7 @@ def test_cli_version_multiple_commands(capsys):
     assert captured.out.strip() == version
     assert not ran1
     assert not ran2
+
 
 def test_cli_single_command():
     """Test that the name can be left out for CLIs with only one command."""
