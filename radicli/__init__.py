@@ -47,7 +47,6 @@ class Radicli:
     commands: Dict[str, Command]
     subcommands: Dict[str, Dict[str, Command]]
     errors: ErrorHandlersType
-    static_help: bool
     static_path: Optional[Union[str, Path]]
     _subcommand_key: str
     _help_arg: str
@@ -61,7 +60,6 @@ class Radicli:
         version: Optional[str] = None,
         converters: ConvertersType = SimpleFrozenDict(),
         errors: Optional[ErrorHandlersType] = None,
-        static_help: bool = False,
         static_path: Optional[Union[str, Path]] = None,
         extra_key: str = "_extra",
     ) -> None:
