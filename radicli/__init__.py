@@ -47,7 +47,7 @@ class Radicli:
     commands: Dict[str, Command]
     subcommands: Dict[str, Dict[str, Command]]
     errors: ErrorHandlersType
-    static_path: Optional[Union[str, Path]]
+    static_path: Optional[Path]
     _subcommand_key: str
     _help_arg: str
     _version_arg: str
@@ -74,7 +74,6 @@ class Radicli:
         self.subcommands = {}
         self.errors = dict(errors) if errors is not None else {}
         self.static_path = Path(static_path) if static_path is not None else None
-        self.static_path = static_path
         self._subcommand_key = "__subcommand__"  # should not conflict with arg name!
         self._help_arg = "--help"
         self._version_arg = "--version"
@@ -276,7 +275,7 @@ class Radicli:
         *,
         name: Optional[str] = None,
         description: Optional[str] = None,
-    ) -> Dict[str, Any]:
+    ) -> Tuple[ArgumentParser, Dict[str, Tuple[ArgumentParser, Command]]]:
         """Get parser for a given command."""
         p = ArgumentParser(
             prog=join_strings(self.prog, name),
@@ -387,9 +386,7 @@ class Radicli:
         info = [self.help, "\nAvailable commands:", format_table(data)]
         return join_strings(*info, char="\n")
 
-    def static_help(
-        self, cmd: Optional[str] = None, sub: Optional[str] = None
-    ) -> Optional[str]:
+    def static_help(self, cmd: Optional[str] = None, sub: Optional[str] = None) -> None:
         if self.static_path:
             if not Path(self.static_path).exists():
                 self.to_static(self.static_path)
@@ -400,6 +397,8 @@ class Radicli:
 
     def to_static(self, path: Optional[Union[str, Path]] = None) -> Path:
         path = Path(path) if path is not None else self.static_path
+        if not path:
+            raise ValueError("Can't generate static help: no path provided")
         data = generate_static_help(self)
         with path.open("w", encoding="utf8") as f:
             f.write(json.dumps(data))
@@ -413,6 +412,6 @@ __all__ = [
     "CommandExistsError", "ConvertersType", "ConverterType", "ErrorHandlersType",
     "DEFAULT_PLACEHOLDER", "ExistingPath", "ExistingFilePath", "ExistingDirPath",
     "ExistingPathOrDash", "ExistingFilePathOrDash", "PathOrDash",
-    "ExistingDirPathOrDash"
+    "ExistingDirPathOrDash", "generate_static_help"
 ]
 # fmt: on

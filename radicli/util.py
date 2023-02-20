@@ -274,18 +274,22 @@ def get_static_help(
 
 
 def generate_static_help(cli: "Radicli") -> Dict[str, Any]:
-    result = {STATIC_CMD_KEY: {}, STATIC_SUB_KEY: {}}
-    result[STATIC_ROOT_KEY] = cli.format_info()
+    cmds: Dict[str, str] = {}
+    subs: Dict[str, Dict[str, str]] = {}
     for cmd in cli.commands.values():
         subcmds = cli.subcommands.get(cmd.name, {})
         parser, subparsers = cli.get_parsers(
             cmd.args, subcmds, name=cmd.name, description=cmd.description
         )
-        result[STATIC_CMD_KEY][cmd.name] = parser.format_help()
-        result[STATIC_SUB_KEY][cmd.name] = {}
+        cmds[cmd.name] = parser.format_help()
+        subs[cmd.name] = {}
         for subp, subcmd in subparsers.values():
-            result[STATIC_SUB_KEY][cmd.name][subcmd.name] = subp.format_help()
-    return result
+            subs[cmd.name][subcmd.name] = subp.format_help()
+    return {
+        STATIC_ROOT_KEY: cli.format_info(),
+        STATIC_CMD_KEY: cmds,
+        STATIC_SUB_KEY: subs,
+    }
 
 
 def expand_error_subclasses(
