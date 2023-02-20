@@ -213,45 +213,45 @@ class Radicli:
         run_args = args if args is not None else [*sys.argv]
         if len(run_args) <= 1 or run_args[1] == self._help_arg:
             print(self.format_info())
-        else:
-            # Make single command CLIs available without command name
-            if len(self.commands) == 1 and len(self.subcommands) <= 1:
-                single_cmd = list(self.commands.keys())[0]
-                if run_args[1] != single_cmd:
-                    run_args.insert(1, single_cmd)
-            command = run_args.pop(1)
-            args = run_args[1:]
-            if self.version and command == self._version_arg:
-                print(self.version)
-                sys.exit(0)
-            subcommands = self.subcommands.get(command, {})
-            if command not in self.commands:
-                if not subcommands:
-                    raise CommandNotFoundError(command, list(self.commands))
-                # Add a dummy parent to support subcommands without parents
-                self.placeholder(command)
-            cmd = self.commands[command]
-            values = self.parse(
-                args,
-                cmd.args,
-                subcommands,
-                name=cmd.name,
-                description=cmd.description,
-                allow_extra=cmd.allow_extra,
-            )
-            sub = values.pop(self._subcommand_key, None)
-            func = subcommands[sub].func if sub else cmd.func
-            # Catch specific error types (and their subclasses), and invoke
-            # their handler callback. Handlers can return an integer exit code,
-            # which will be passed to sys.exit.
-            errors_map = expand_error_subclasses(self.errors)
-            try:
-                func(**values)
-            except tuple(errors_map.keys()) as e:
-                handler = errors_map[e.__class__]
-                err_code = handler(e)
-                if err_code is not None:
-                    sys.exit(err_code)
+            sys.exit(0)
+        # Make single command CLIs available without command name
+        if len(self.commands) == 1 and len(self.subcommands) <= 1:
+            single_cmd = list(self.commands.keys())[0]
+            if run_args[1] != single_cmd:
+                run_args.insert(1, single_cmd)
+        command = run_args.pop(1)
+        args = run_args[1:]
+        if self.version and command == self._version_arg:
+            print(self.version)
+            sys.exit(0)
+        subcommands = self.subcommands.get(command, {})
+        if command not in self.commands:
+            if not subcommands:
+                raise CommandNotFoundError(command, list(self.commands))
+            # Add a dummy parent to support subcommands without parents
+            self.placeholder(command)
+        cmd = self.commands[command]
+        values = self.parse(
+            args,
+            cmd.args,
+            subcommands,
+            name=cmd.name,
+            description=cmd.description,
+            allow_extra=cmd.allow_extra,
+        )
+        sub = values.pop(self._subcommand_key, None)
+        func = subcommands[sub].func if sub else cmd.func
+        # Catch specific error types (and their subclasses), and invoke
+        # their handler callback. Handlers can return an integer exit code,
+        # which will be passed to sys.exit.
+        errors_map = expand_error_subclasses(self.errors)
+        try:
+            func(**values)
+        except tuple(errors_map.keys()) as e:
+            handler = errors_map[e.__class__]
+            err_code = handler(e)
+            if err_code is not None:
+                sys.exit(err_code)
 
     def get_parsers(
         self,
