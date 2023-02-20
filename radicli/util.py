@@ -1,18 +1,24 @@
 from typing import Any, Callable, Iterable, Type, Union, Optional, Dict, Tuple
 from typing import List, Literal, NewType, get_args, get_origin, TypeVar
+from typing import TYPE_CHECKING
 from enum import Enum
 from dataclasses import dataclass
 from pathlib import Path
 import inspect
 import argparse
+import json
 
 # We need this Iterable type, which is the type origin of types.Iterable
 try:
     from collections.abc import Iterable as IterableType  # Python 3.9+
 except ImportError:
     from collections import Iterable as IterableType  # type: ignore
+if TYPE_CHECKING:
+    from . import Radicli
 
-
+STATIC_ROOT_KEY = "root"
+STATIC_CMD_KEY = "cmd"
+STATIC_SUB_KEY = "sub"
 DEFAULT_PLACEHOLDER = argparse.SUPPRESS
 BASE_TYPES = [str, int, float, Path]
 ConverterType = Callable[[str], Any]
@@ -247,6 +253,39 @@ def format_arg_help(text: Optional[str], max_width: int = 70) -> str:
     d = (text or "").strip()[:max_width]
     end = "." if "." in d or len(text or "") <= max_width else "..."
     return (d.rsplit(".", 1)[0] if "." in d else d) + end
+
+
+def get_static_help(
+    file_path: Union[str, Path],
+    cmd: Optional[str] = None,
+    sub: Optional[str] = None,
+) -> Optional[str]:
+    with Path(file_path).open("r", encoding="utf8") as f:
+        data = json.load(f)
+    if not cmd:
+        return data[STATIC_ROOT_KEY]
+    if cmd and cmd not in data[STATIC_CMD_KEY]:
+        return None
+    if sub and sub in data[STATIC_SUB_KEY][cmd]:
+        return data[STATIC_SUB_KEY][cmd][sub]
+    elif cmd:
+        return data[STATIC_CMD_KEY][cmd]
+    return None
+
+
+def generate_static_help(cli: "Radicli") -> Dict[str, Any]:
+    result = {STATIC_CMD_KEY: {}, STATIC_SUB_KEY: {}}
+    result[STATIC_ROOT_KEY] = cli.format_info()
+    for cmd in cli.commands.values():
+        subcmds = cli.subcommands.get(cmd.name, {})
+        parser, subparsers = cli.get_parsers(
+            cmd.args, subcmds, name=cmd.name, description=cmd.description
+        )
+        result[STATIC_CMD_KEY][cmd.name] = parser.format_help()
+        result[STATIC_SUB_KEY][cmd.name] = {}
+        for subp, subcmd in subparsers.values():
+            result[STATIC_SUB_KEY][cmd.name][subcmd.name] = subp.format_help()
+    return result
 
 
 def expand_error_subclasses(

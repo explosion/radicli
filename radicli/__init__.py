@@ -1,13 +1,17 @@
-from typing import Any, Callable, Dict, List, Optional, Type, TypeVar, Tuple, cast
+from typing import Any, Callable, Dict, List, Optional, Type, TypeVar, Tuple
+from typing import Union, cast
 import sys
 from dataclasses import dataclass
 from inspect import signature
+from pathlib import Path
+import json
 
 from .parser import ArgumentParser, HelpFormatter
 from .util import Arg, ArgparseArg, get_arg, join_strings, format_type, format_table
 from .util import format_arg_help, expand_error_subclasses, SimpleFrozenDict
 from .util import CommandNotFoundError, CliParserError, CommandExistsError
 from .util import ConverterType, ConvertersType, ErrorHandlersType
+from .util import get_static_help, generate_static_help
 from .util import DEFAULT_CONVERTERS, DEFAULT_PLACEHOLDER
 
 # Make available for import
@@ -43,6 +47,8 @@ class Radicli:
     commands: Dict[str, Command]
     subcommands: Dict[str, Dict[str, Command]]
     errors: ErrorHandlersType
+    static_help: bool
+    static_path: Optional[Union[str, Path]]
     _subcommand_key: str
     _help_arg: str
     _version_arg: str
@@ -55,6 +61,8 @@ class Radicli:
         version: Optional[str] = None,
         converters: ConvertersType = SimpleFrozenDict(),
         errors: Optional[ErrorHandlersType] = None,
+        static_help: bool = False,
+        static_path: Optional[Union[str, Path]] = None,
         extra_key: str = "_extra",
     ) -> None:
         """Initialize the CLI and create the registry."""
@@ -67,6 +75,8 @@ class Radicli:
         self.commands = {}
         self.subcommands = {}
         self.errors = dict(errors) if errors is not None else {}
+        self.static_path = Path(static_path) if static_path is not None else None
+        self.static_path = static_path
         self._subcommand_key = "__subcommand__"  # should not conflict with arg name!
         self._help_arg = "--help"
         self._version_arg = "--version"
@@ -214,7 +224,8 @@ class Radicli:
         """
         run_args = args if args is not None else sys.argv
         if len(run_args) <= 1 or run_args[1] == self._help_arg:
-            print(self._format_info())
+            self.static_help()
+            print(self.format_info())
         else:
             # Make single command CLIs available without command name
             if len(self.commands) == 1 and len(self.subcommands) <= 1:
@@ -226,6 +237,11 @@ class Radicli:
             if self.version and command == self._version_arg:
                 print(self.version)
                 sys.exit(0)
+            if self.static_path and self._help_arg in args:
+                if len(args) == 1:  # only --help
+                    self.static_help(command)
+                elif len(args) == 2:  # with subcommand
+                    self.static_help(command, args[0])
             subcommands = self.subcommands.get(command, {})
             if command not in self.commands:
                 if not subcommands:
@@ -255,17 +271,15 @@ class Radicli:
                 if err_code is not None:
                     sys.exit(err_code)
 
-    def parse(
+    def get_parsers(
         self,
-        args: List[str],
         arg_info: List[ArgparseArg],
         subcommands: Dict[str, Command] = SimpleFrozenDict(),
         *,
         name: Optional[str] = None,
         description: Optional[str] = None,
-        allow_extra: bool = False,
     ) -> Dict[str, Any]:
-        """Parse a list of arguments. Can also be used for testing."""
+        """Get parser for a given command."""
         p = ArgumentParser(
             prog=join_strings(self.prog, name),
             description=description,
@@ -297,6 +311,22 @@ class Radicli:
                 )
                 subparsers[sub_cmd.name] = (subp, sub_cmd)
                 self._add_args(subp, sub_cmd.args)
+        return p, subparsers
+
+    def parse(
+        self,
+        args: List[str],
+        arg_info: List[ArgparseArg],
+        subcommands: Dict[str, Command] = SimpleFrozenDict(),
+        *,
+        name: Optional[str] = None,
+        description: Optional[str] = None,
+        allow_extra: bool = False,
+    ) -> Dict[str, Any]:
+        """Parse a list of arguments. Can also be used for testing."""
+        p, subparsers = self.get_parsers(
+            arg_info, subcommands, name=name, description=description
+        )
         # Handling of subcommands is a bit convoluted
         # https://docs.python.org/3/library/argparse.html#sub-commands
         namespace, extra = p.parse_known_args(args)
@@ -344,7 +374,7 @@ class Radicli:
                 raise CliParserError(err)
         return values
 
-    def _format_info(self) -> str:
+    def format_info(self) -> str:
         """Nicely format the available command overview and add subcommands."""
         data = []
         for name, cmd in self.commands.items():
@@ -358,6 +388,24 @@ class Radicli:
                 data.append((f"  {name}", col))
         info = [self.help, "\nAvailable commands:", format_table(data)]
         return join_strings(*info, char="\n")
+
+    def static_help(
+        self, cmd: Optional[str] = None, sub: Optional[str] = None
+    ) -> Optional[str]:
+        if self.static_path:
+            if not Path(self.static_path).exists():
+                self.to_static(self.static_path)
+            static = get_static_help(self.static_path, cmd, sub)
+            if static:
+                print(static)
+                sys.exit(0)
+
+    def to_static(self, path: Optional[Union[str, Path]] = None) -> Path:
+        path = Path(path) if path is not None else self.static_path
+        data = generate_static_help(self)
+        with path.open("w", encoding="utf8") as f:
+            f.write(json.dumps(data))
+        return path
 
 
 # fmt: off
