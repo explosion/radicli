@@ -2,7 +2,7 @@
 
 # radicli: Radically lightweight command-line interfaces
 
-`radicli` is a small, zero-dependency Python package for creating command line interfaces, built on top of Python's [`argparse`](https://docs.python.org/3/library/argparse.html) module. It introduces minimal overhead, preserves your original Python functions and uses type hints to parse values provided on the CLI. It supports all common types out-of-the-box, including complex ones like `List[str]`, `Literal` and `Enum`, and allows registering custom types with custom converters, as well as custom CLI-only error handling.
+`radicli` is a small, zero-dependency Python package for creating command line interfaces, built on top of Python's [`argparse`](https://docs.python.org/3/library/argparse.html) module. It introduces minimal overhead, preserves your original Python functions and uses **type hints** to parse values provided on the CLI. It supports all common types out-of-the-box, including complex ones like `List[str]`, `Literal` and `Enum`, and allows registering **custom types** with custom converters, as well as custom CLI-only **error handling** and exporting a **static representation** for faster `--help` and errors.
 
 > **Important note:** This package aims to be a simple option based on the requirements of our libraries. If you're looking for a more full-featured CLI toolkit, check out [`typer`](https://typer.tiangolo.com), [`click`](https://click.palletsprojects.com) or [`plac`](https://plac.readthedocs.io/en/latest/).
 
@@ -284,6 +284,33 @@ def handle_custom_error(error: CustomError) -> int:
     return 1
 ```
 
+### Using static data for faster help and errors
+
+CLIs often require various other Python packages that need to be imported – for example, you might need to import `pytorch` and `tensorflow`, or load other resources in the global scope. This all adds to the CLI's load time, so even showing the `--help` message may take several seconds to run. That's all unnecessary and makes for a frustrating developer experience.
+
+`radicli` lets you generate a static representation of your CLI as a JSON file, including everything needed to output help messages and to check that the command exists and the correct and required arguments are provided. If the static CLI doesn't perform a system exit via printing the help message or raising an error, you can import and run the "live" CLI to continue. This lets you **defer the import until it's really needed**, i.e. to convert the arguments to the expected types and executing the command function.
+
+```python
+cli.to_static("./static.json")
+```
+
+```python
+from radicli import StaticRadicli
+
+static = StaticRadicli.load("./static.json")
+
+if __name__ == "__main__":
+    static.run()
+
+    # This only runs if the static CLI doesn't error or print help
+    from .cli import cli
+    cli.run()
+```
+
+If the CLI is part of a Python package, you can generate the static JSON file during your build process and ship the pre-generated JSON file with your package.
+
+`StaticRadicli` also provides a `disable` argument to disable static parsing during development (or if a certain environment variable is set). Setting `debug=True` will print an additional start and optional end marker (if the static CLI didn't exit before) to indicate that the static CLI ran.
+
 ## 🎛 API
 
 ### <kbd>dataclass</kbd> `Arg`
@@ -445,6 +472,90 @@ Run the CLI. Typically called in a `if __name__ == "__main__":` block at the end
 
 ```python
 if __name__ == "__main__":
+    cli.run()
+```
+
+| Argument | Type                  | Description                                                                               |
+| -------- | --------------------- | ----------------------------------------------------------------------------------------- |
+| `args`   | `Optional[List[str]]` | Optional command to pass in. Will be read from `sys.argv` if not set (standard use case). |
+
+#### <kbd>method</kbd> `Radicli.to_static`
+
+Export a static JSON representation of the CLI for `StaticRadicli`.
+
+```python
+cli.to_static("./static.json")
+```
+
+| Argument    | Type               | Description                     |
+| ----------- | ------------------ | ------------------------------- |
+| `file_path` | `Union[str, Path]` | The path to the JSON file.      |
+| **RETURNS** | `Path`             | The path the data was saved to. |
+
+#### <kbd>method</kbd> `Radicli.to_static_json`
+
+Generate a static representation of the CLI for `StaticRadicli` as a JSON-serializable dict.
+
+```python
+data = cli.to_static_json()
+```
+
+| Argument    | Type             | Description      |
+| ----------- | ---------------- | ---------------- |
+| **RETURNS** | `Dict[str, Any]` | The static data. |
+
+### <kbd>class</kbd> `StaticRadicli`
+
+Subclass of `Radicli` and static version of the CLI that can be loaded from a static representation of the CLI, generated with `Radicli.to_static`. The static CLI can run before importing and running the live CLI and will take care of showing help messages and doing basic argument checks, e.g. to ensure all arguments are correct and present. This can make your CLI help significantly faster by deferring the import of the live CLI until it's really needed, i.e. to convert the values and execute the function.
+
+```python
+static = StaticRadicli.load("./static.json")
+
+if __name__ == "__main__":
+    static.run()
+    # This only runs if the static CLI doesn't error or print help
+    from .cli import cli
+    cli.run()
+```
+
+#### <kbd>classmethod</kbd> `StaticRadicli.load`
+
+Load the static CLI from a JSON file generated with `Radicli.to_static`.
+
+```python
+static = StaticRadicli.load("./static.json")
+```
+
+| Argument    | Type               | Description                                                                                                                                                                  |
+| ----------- | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `file_path` | `Union[str, Path]` | The JSON file to load.                                                                                                                                                       |
+| `disable`   | `bool`             | Whether to disable static parsing. Can be useful during development. Defaults to `False`.                                                                                    |
+| `debug`     | `bool`             | Enable debugging mode and print an additional start and optional end marker (if the static CLI didn't exit before) to indicate that the static CLI ran. Defaults to `False`. |
+
+#### <kbd>method</kbd> `StaticRadicli.__init__`
+
+Initialize the static CLI with the JSON-serializable static representation.
+
+```python
+data = cli.to_static_json()
+static = StaticRadicli(data)
+```
+
+| Argument  | Type             | Description                                                                                                                                                                  |
+| --------- | ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `data`    | `Dict[str, Any]` | The static data.                                                                                                                                                             |
+| `disable` | `bool`           | Whether to disable static parsing. Can be useful during development. Defaults to `False`.                                                                                    |
+| `debug`   | `bool`           | Enable debugging mode and print an additional start and optional end marker (if the static CLI didn't exit before) to indicate that the static CLI ran. Defaults to `False`. |
+
+#### <kbd>method</kbd> `StaticRadicli.run`
+
+Run the static CLI. Typically called before running the live CLI and will perform a system exit if a help message was printed (`0`) or if argument names were missing or incorrect (`1`). This means you can defer loading the live CLI until it's really needed, , i.e. to convert the values and execute the function.
+
+```python
+if __name__ == "__main__":
+    static.run()
+
+    from .cli import cli
     cli.run()
 ```
 

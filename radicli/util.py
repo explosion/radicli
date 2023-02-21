@@ -1,5 +1,5 @@
 from typing import Any, Callable, Iterable, Type, Union, Optional, Dict, Tuple
-from typing import List, Literal, NewType, get_args, get_origin, TypeVar
+from typing import List, Literal, NewType, get_args, get_origin, TypeVar, TypedDict
 from enum import Enum
 from dataclasses import dataclass
 from pathlib import Path
@@ -12,7 +12,6 @@ try:
 except ImportError:
     from collections import Iterable as IterableType  # type: ignore
 
-
 DEFAULT_PLACEHOLDER = argparse.SUPPRESS
 BASE_TYPES = [str, int, float, Path]
 ConverterType = Callable[[str], Any]
@@ -20,6 +19,36 @@ ConvertersType = Dict[Union[Type, object], ConverterType]
 _Exc = TypeVar("_Exc", bound=Exception, covariant=True)
 ErrorHandlerType = Callable[[Exception], Optional[int]]
 ErrorHandlersType = Dict[Type[_Exc], Callable[[_Exc], Optional[int]]]
+
+
+class StaticArg(TypedDict):
+    id: str
+    option: Optional[str]
+    short: Optional[str]
+    orig_help: Optional[str]
+    default: str
+    help: Optional[str]
+    action: Optional[str]
+    choices: Optional[List[str]]
+    has_converter: bool
+
+
+class StaticCommand(TypedDict):
+    name: str
+    args: List[StaticArg]
+    description: Optional[str]
+    allow_extra: bool
+    parent: Optional[str]
+    is_placeholder: bool
+
+
+class StaticData(TypedDict):
+    prog: Optional[str]
+    help: str
+    version: Optional[str]
+    extra_key: str
+    commands: Dict[str, StaticCommand]
+    subcommands: Dict[str, Dict[str, StaticCommand]]
 
 
 class CliParserError(SystemExit):
@@ -114,6 +143,39 @@ class ArgparseArg:
         if self.choices is not None:
             kwargs["choices"] = self.choices
         return args, kwargs
+
+    def to_static_json(self) -> StaticArg:
+        """Convert the argument to a JSON-serializable dict."""
+        return {
+            "id": self.id,
+            "option": self.arg.option,
+            "short": self.arg.short,
+            "orig_help": self.arg.help,
+            "default": str(self.default),
+            "help": self.help,
+            "action": str(self.action) if self.action else None,
+            "choices": list(c.value if isinstance(c, Enum) else c for c in self.choices)
+            if self.choices
+            else None,
+            "has_converter": self.has_converter,
+        }
+
+    @classmethod
+    def from_static_json(cls, data: StaticArg) -> "ArgparseArg":
+        """Initialize the static argument from a JSON-serializable dict."""
+        return ArgparseArg(
+            id=data["id"],
+            arg=Arg(data["option"], data["short"], help=data["orig_help"]),
+            type=str if not data["action"] else None,  # dummy, not used
+            orig_type=str if not data["action"] else None,  # dummy, not used
+            default=DEFAULT_PLACEHOLDER
+            if data["default"] == DEFAULT_PLACEHOLDER
+            else data["default"],
+            help=data["help"],
+            action=data["action"],
+            choices=data["choices"],
+            has_converter=data["has_converter"],
+        )
 
 
 def get_arg(
