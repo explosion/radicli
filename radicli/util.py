@@ -26,7 +26,7 @@ class StaticArg(TypedDict):
     option: Optional[str]
     short: Optional[str]
     orig_help: Optional[str]
-    default: str
+    default: Optional[Union[bool, str]]
     help: Optional[str]
     action: Optional[str]
     choices: Optional[List[str]]
@@ -151,7 +151,9 @@ class ArgparseArg:
             "option": self.arg.option,
             "short": self.arg.short,
             "orig_help": self.arg.help,
-            "default": str(self.default),
+            "default": str(self.default)
+            if self.default not in (False, None)
+            else self.default,
             "help": self.help,
             "action": str(self.action) if self.action else None,
             "choices": list(c.value if isinstance(c, Enum) else c for c in self.choices)
