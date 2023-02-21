@@ -411,10 +411,10 @@ class Radicli:
             },
         }
 
-    def to_static(self, path: Union[str, Path]) -> Path:
+    def to_static(self, file_path: Union[str, Path]) -> Path:
         """Generate a static representation of the CLI for StaticRadicli."""
         data = self.to_static_json()
-        path = Path(path)
+        path = Path(file_path)
         with path.open("w", encoding="utf8") as f:
             f.write(json.dumps(data))
         return path
