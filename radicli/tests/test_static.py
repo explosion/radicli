@@ -21,7 +21,7 @@ def test_to_static_roundtrip(capsys):
         path = dir_path / "static.json"
         cli.to_static(path)
 
-        static = StaticRadicli(path)
+        static = StaticRadicli.load(path)
 
     assert static.prog == cli.prog
     assert len(static.commands) == len(cli.commands)
@@ -62,3 +62,19 @@ def test_to_static_roundtrip(capsys):
         cli.run(["", "world", "--help"])
     captured2 = capsys.readouterr().out
     assert captured1 == captured2
+
+    with make_tempdir() as dir_path:
+        path = dir_path / "static.json"
+        cli.to_static(path)
+
+        static = StaticRadicli.load(path, debug=True)
+
+    with pytest.raises(SystemExit):
+        static.run(["", "hello", "--help"])
+    captured = capsys.readouterr().out
+    assert static._debug_start in captured
+
+    static.disable = True
+    static.run(["", "hello", "--help"])
+    captured = capsys.readouterr().out
+    assert not captured

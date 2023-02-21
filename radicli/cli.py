@@ -10,8 +10,8 @@ from .parser import ArgumentParser, HelpFormatter
 from .util import Arg, ArgparseArg, get_arg, join_strings, format_type, format_table
 from .util import format_arg_help, expand_error_subclasses, SimpleFrozenDict
 from .util import CommandNotFoundError, CliParserError, CommandExistsError
-from .util import ConverterType, ConvertersType, ErrorHandlersType
-from .util import DEFAULT_CONVERTERS, DEFAULT_PLACEHOLDER
+from .util import ConverterType, ConvertersType, ErrorHandlersType, StaticCommand
+from .util import StaticData, DEFAULT_CONVERTERS, DEFAULT_PLACEHOLDER
 
 
 _CallableT = TypeVar("_CallableT", bound=Callable)
@@ -31,7 +31,7 @@ class Command:
     def display_name(self) -> str:
         return f"{self.parent} {self.name}" if self.parent else self.name
 
-    def to_static_json(self) -> Dict[str, Any]:
+    def to_static_json(self) -> StaticCommand:
         """Convert the command to a JSON-serializable dict."""
         return {
             "name": self.name,
@@ -43,7 +43,7 @@ class Command:
         }
 
     @classmethod
-    def from_static_json(cls, data: Dict[str, Any]) -> "Command":
+    def from_static_json(cls, data: StaticCommand) -> "Command":
         """Initialize the static command from a JSON-serializable dict."""
         return cls(
             name=data["name"],
@@ -58,7 +58,7 @@ class Command:
 
 class Radicli:
     prog: Optional[str]
-    help: Optional[str]
+    help: str
     version: Optional[str]
     converters: ConvertersType
     extra_key: str
@@ -395,7 +395,7 @@ class Radicli:
         info = [self.help, "\nAvailable commands:", format_table(data)]
         return join_strings(*info, char="\n")
 
-    def to_static_json(self) -> Dict[str, Any]:
+    def to_static_json(self) -> StaticData:
         """Convert the CLI to a JSON-serializable dict."""
         return {
             "prog": self.prog,
