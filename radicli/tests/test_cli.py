@@ -1,16 +1,24 @@
-from typing import List, Optional, Literal, TypeVar, Generic, Type
+from typing import List, Iterator, Optional, Literal, TypeVar, Generic, Type
 from enum import Enum
 from dataclasses import dataclass
 import pytest
 import sys
-
+from contextlib import contextmanager
+import tempfile
+import shutil
 from pathlib import Path
-from radicli import Radicli, Arg
+from radicli import Radicli, StaticRadicli, Arg
 from radicli.util import CommandNotFoundError, CliParserError
 from radicli.util import ExistingPath, ExistingFilePath, ExistingDirPath
 from radicli.util import ExistingFilePathOrDash
 
-from .util import make_tempdir
+
+@contextmanager
+def make_tempdir() -> Iterator[Path]:
+    """Run a block in a temp directory and remove it afterwards."""
+    d = Path(tempfile.mkdtemp())
+    yield d
+    shutil.rmtree(str(d))
 
 
 def test_cli_sys_argv():
@@ -743,3 +751,79 @@ def test_cli_errors(
         cli.run(["", "test"])
         assert ran
         assert handler_ran is expect_handled
+
+
+def test_cli_static_roundtrip(capsys):
+    cli = Radicli(prog="test")
+
+    @cli.command("hello", a=Arg("--a", help="aaa"), b=Arg("--b", help="bbb"))
+    def hello(a, b):
+        """Hello"""
+        ...
+
+    @cli.command("world", c=Arg(help="ccc"))
+    def world(c):
+        """World"""
+        ...
+
+    with make_tempdir() as dir_path:
+        path = dir_path / "static.json"
+        cli.to_static(path)
+
+        static = StaticRadicli.load(path)
+
+    assert static.prog == cli.prog
+    assert len(static.commands) == len(cli.commands)
+    for parent, commands in static.subcommands:
+        assert parent in cli.subcommands
+        assert len(cli.subcommands[parent]) == len(commands)
+
+    hello1 = static.commands["hello"]
+    hello2 = cli.commands["hello"]
+    assert hello1.name == hello2.name
+    assert hello1.description == hello2.description
+    for arg1, arg2 in zip(hello1.args, hello2.args):
+        assert arg1.help == arg2.help
+        assert arg1.arg.option == arg2.arg.option
+        assert arg1.arg.short == arg2.arg.short
+        assert arg1.arg.help == arg2.arg.help
+
+    with pytest.raises(SystemExit):
+        static.run(["", "--help"])
+    captured1 = capsys.readouterr().out
+    with pytest.raises(SystemExit):
+        cli.run(["", "--help"])
+    captured2 = capsys.readouterr().out
+    assert captured1 == captured2
+
+    with pytest.raises(SystemExit):
+        static.run(["", "hello", "--help"])
+    captured1 = capsys.readouterr().out
+    with pytest.raises(SystemExit):
+        cli.run(["", "hello", "--help"])
+    captured2 = capsys.readouterr().out
+    assert captured1 == captured2
+
+    with pytest.raises(SystemExit):
+        static.run(["", "world", "--help"])
+    captured1 = capsys.readouterr().out
+    with pytest.raises(SystemExit):
+        cli.run(["", "world", "--help"])
+    captured2 = capsys.readouterr().out
+    assert captured1 == captured2
+
+    with make_tempdir() as dir_path:
+        path = dir_path / "static.json"
+        cli.to_static(path)
+
+        static = StaticRadicli.load(path, debug=True)
+
+    with pytest.raises(SystemExit):
+        static.run(["", "hello", "--help"])
+    captured = capsys.readouterr().out
+    assert static._debug_start in captured
+
+    static.disable = True
+    static.run(["", "hello", "--help"])
+    captured = capsys.readouterr().out
+    assert not captured
