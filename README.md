@@ -406,7 +406,7 @@ Hello world, Alex!
 ```python
 @cli.subcommand_with_extra("hello", "world", name=Arg(help="Your name"))
 def hello_world(name: str, _extra: List[str]) -> None:
-    print(f"Hello world, {name}!", _extra])
+    print(f"Hello world, {name}!", _extra)
 ```
 
 ```
