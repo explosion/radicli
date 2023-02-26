@@ -344,6 +344,14 @@ Internal representation of a CLI command. Can be accessed via `Radicli.commands`
 
 Create a command from a function and its argument annotations and use the type hints and defaults defined in the function to generate the arguments. This is what happens under the hood in the command decorators and it can be used if you need to construct a `Command` manually.
 
+```python
+def hello(name: str, age: int):
+    print(f"Hello {name} ({age})!")
+
+args = {"name": Arg(), "age": Arg("--age", help="Your age")}
+command = Command.from_function("hello", args, hello)
+```
+
 | Argument      | Type                               | Description                                                                                                 |
 | ------------- | ---------------------------------- | ----------------------------------------------------------------------------------------------------------- |
 | `name`        | `str`                              | The name of the command.                                                                                    |
@@ -493,6 +501,23 @@ if __name__ == "__main__":
 | Argument | Type                  | Description                                                                               |
 | -------- | --------------------- | ----------------------------------------------------------------------------------------- |
 | `args`   | `Optional[List[str]]` | Optional command to pass in. Will be read from `sys.argv` if not set (standard use case). |
+
+#### <kbd>method</kbd> `Radicli.parse`
+
+Parse a list of arguments for a given command. Typically internals, but can also be used for testing.
+
+```python
+command = cli.commands["hello"]
+values = cli.parse(["Alex", "--age", "35"], command)
+command.func(**values)
+```
+
+| Argument      | Type                 | Description                                                                                  |
+| ------------- | -------------------- | -------------------------------------------------------------------------------------------- |
+| `args`        | `List[str]`          | The string arguments, e.g. what's received from the command line.                            |
+| `command`     | `Command`            | The command.                                                                                 |
+| `subcommands` | `Dict[str, Command]` | Subcommands of the parent command, if available, keyed by subcommand name. Defaults to `{}`. |
+| **RETURNS**   | `Dict[str, Any]`     | The parsed values keyed by argument name that can be passed to the command function.         |
 
 #### <kbd>method</kbd> `Radicli.to_static`
 

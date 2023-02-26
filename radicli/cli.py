@@ -230,9 +230,11 @@ class Radicli:
             raise CommandExistsError(name)
 
         def func(*args, **kwargs) -> None:
-            sub = self.subcommands.get(name, {})
+            dummy = Command(
+                name=name, func=lambda: None, args=[], description=description
+            )
             # If this runs, we want to show the help instead of doing nothing
-            self.parse([self._help_arg], [], sub, name=name, description=description)
+            self.parse([self._help_arg], dummy, self.subcommands.get(name, {}))
 
         dummy = Command(
             name=name, func=func, args=[], description=description, is_placeholder=True
@@ -265,14 +267,7 @@ class Radicli:
             # Add a dummy parent to support subcommands without parents
             self.placeholder(command)
         cmd = self.commands[command]
-        values = self.parse(
-            args,
-            cmd.args,
-            subcommands,
-            name=cmd.name,
-            description=cmd.description,
-            allow_extra=cmd.allow_extra,
-        )
+        values = self.parse(args, cmd, subcommands)
         sub = values.pop(self._subcommand_key, None)
         func = subcommands[sub].func if sub else cmd.func
         # Catch specific error types (and their subclasses), and invoke
@@ -289,23 +284,20 @@ class Radicli:
 
     def get_parsers(
         self,
-        arg_info: List[ArgparseArg],
+        command: Command,
         subcommands: Dict[str, Command] = SimpleFrozenDict(),
-        *,
-        name: Optional[str] = None,
-        description: Optional[str] = None,
     ) -> Tuple[ArgumentParser, Dict[str, Tuple[ArgumentParser, Command]]]:
         """Get parser for a given command."""
         p = ArgumentParser(
-            prog=join_strings(self.prog, name),
-            description=description,
+            prog=join_strings(self.prog, command.name),
+            description=command.description,
             formatter_class=HelpFormatter,
-            add_help=not any(a.arg.option == self._help_arg for a in arg_info),
+            add_help=not any(a.arg.option == self._help_arg for a in command.args),
             argument_default=DEFAULT_PLACEHOLDER,
         )
         if self.version:
             p.add_argument(self._version_arg, action="version", version=self.version)
-        self._add_args(p, arg_info)
+        self._add_args(p, command.args)
         subparsers: Dict[str, Tuple[ArgumentParser, Command]] = {}
         if subcommands:
             # We're using the dest to determine whether subcommand was called
@@ -332,31 +324,24 @@ class Radicli:
     def parse(
         self,
         args: List[str],
-        arg_info: List[ArgparseArg],
+        command: Command,
         subcommands: Dict[str, Command] = SimpleFrozenDict(),
-        *,
-        name: Optional[str] = None,
-        description: Optional[str] = None,
-        allow_extra: bool = False,
     ) -> Dict[str, Any]:
         """Parse a list of arguments. Can also be used for testing."""
-        p, subparsers = self.get_parsers(
-            arg_info, subcommands, name=name, description=description
-        )
+        p, subparsers = self.get_parsers(command, subcommands)
         # Handling of subcommands is a bit convoluted
         # https://docs.python.org/3/library/argparse.html#sub-commands
         namespace, extra = p.parse_known_args(args)
         values = {**vars(namespace), self.extra_key: extra}
         sub_key = values.pop(self._subcommand_key, None)
         if not sub_key:  # we're not in a subcommand
-            cmds = self.commands[name] if name in self.commands else None
-            return self._validate(cmds, values, allow_extra)
+            return self._validate(command, values)
         if sub_key not in subparsers:
             raise CliParserError(f"invalid subcommand: '{sub_key}'")
         subparser, subcmd = subparsers[cast(str, sub_key)]
         sub_namespace, sub_extra = subparser.parse_known_args(args[1:])
         sub_values = {**vars(sub_namespace), self.extra_key: sub_extra}
-        sub_values = self._validate(subcmd, sub_values, subcmd.allow_extra)
+        sub_values = self._validate(subcmd, sub_values)
         return {**sub_values, self._subcommand_key: sub_key}
 
     def _add_args(self, parser: ArgumentParser, args: List[ArgparseArg]) -> None:
@@ -367,27 +352,24 @@ class Radicli:
             func_args, func_kwargs = arg.to_argparse()
             parser.add_argument(*func_args, **func_kwargs)
 
-    def _validate(
-        self, command: Optional[Command], values: Dict[str, Any], allow_extra: bool
-    ) -> Dict[str, Any]:
+    def _validate(self, command: Command, values: Dict[str, Any]) -> Dict[str, Any]:
         """
         Validate required args separately to avoid subparser conflicts.
         Handle extra arguments and raise error if needed. We're doing this
         manually to avoide false positive argparse errors with subcommands.
         """
         extra = values.get(self.extra_key)
-        if not allow_extra:
+        if not command.allow_extra:
             if extra:
                 raise CliParserError(f"unrecognized arguments: {' '.join(extra)}")
             values.pop(self.extra_key, None)
-        if command:
-            required = []
-            for arg in command.args:
-                if arg.id not in values or values[arg.id] is DEFAULT_PLACEHOLDER:
-                    required.append(arg.arg.option or arg.id)
-            if required:
-                err = f"the following arguments are required: {', '.join(required)}"
-                raise CliParserError(err)
+        required = []
+        for arg in command.args:
+            if arg.id not in values or values[arg.id] is DEFAULT_PLACEHOLDER:
+                required.append(arg.arg.option or arg.id)
+        if required:
+            err = f"the following arguments are required: {', '.join(required)}"
+            raise CliParserError(err)
         return values
 
     def format_info(self) -> str:
