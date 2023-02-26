@@ -15,6 +15,7 @@ from .util import StaticData, DEFAULT_CONVERTERS, DEFAULT_PLACEHOLDER
 
 
 _CallableT = TypeVar("_CallableT", bound=Callable)
+DEFAULT_EXTRA_KEY = "_extra"
 
 
 @dataclass
@@ -55,6 +56,69 @@ class Command:
             is_placeholder=data["is_placeholder"],
         )
 
+    @classmethod
+    def from_function(
+        cls,
+        name: str,
+        args: Dict[str, Arg],
+        func: Callable,
+        *,
+        parent: Optional[str] = None,
+        allow_extra: bool = False,
+        extra_key: str = DEFAULT_EXTRA_KEY,
+        converters: ConvertersType = SimpleFrozenDict(),
+    ) -> "Command":
+        """Create a command from a function and its argument annotations."""
+        sig = signature(func)
+        sig_types = {}
+        sig_defaults = {}
+        for param_name, param_value in sig.parameters.items():
+            annot = param_value.annotation
+            if param_name == extra_key:
+                annot = List[str]  # set automatically since we know it
+            elif annot == param_value.empty:
+                annot = str  # default to string for unset types
+            sig_types[param_name] = annot
+            sig_defaults[param_name] = (
+                param_value.default
+                if param_value.default != param_value.empty
+                else DEFAULT_PLACEHOLDER  # placeholder for unset defaults
+            )
+            if param_name not in args:  # support args not in decorator
+                args[param_name] = Arg()
+        cli_args = []
+        for param, arg_info in args.items():
+            if param not in sig_types:  # unknown argument
+                path = join_strings(parent, name)
+                err = f"argument not found in function for '{path}': {param}"
+                raise CliParserError(err)
+
+            def get_converter(arg_type: Type) -> Optional[ConverterType]:
+                return converters.get(arg_type, arg_info.converter)
+
+            param_type = sig_types[param]
+            converter = get_converter(param_type)
+            arg_type = converter or param_type
+            arg = get_arg(
+                param,
+                arg_info,
+                arg_type,
+                orig_type=param_type,
+                default=sig_defaults[param],
+                skip_resolve=converter is not None,
+                get_converter=get_converter,
+            )
+            arg.help = join_strings(arg.help, f"({format_type(arg.display_type)})")
+            cli_args.append(arg)
+        return cls(
+            name=name,
+            func=func,
+            args=cli_args,
+            description=func.__doc__,
+            allow_extra=allow_extra,
+            parent=parent,
+        )
+
 
 class Radicli:
     prog: Optional[str]
@@ -77,7 +141,7 @@ class Radicli:
         version: Optional[str] = None,
         converters: ConvertersType = SimpleFrozenDict(),
         errors: Optional[ErrorHandlersType] = None,
-        extra_key: str = "_extra",
+        extra_key: str = DEFAULT_EXTRA_KEY,
     ) -> None:
         """Initialize the CLI and create the registry."""
         self.prog = prog
@@ -124,7 +188,7 @@ class Radicli:
         return self._subcommand(_parent, _name, args, allow_extra=True)
 
     def _subcommand(
-        self, parent: str, name: str, args: Dict[str, Any], *, allow_extra: bool = False
+        self, parent: str, name: str, args: Dict[str, Arg], *, allow_extra: bool = False
     ) -> Callable[[_CallableT], _CallableT]:
         """The decorator used to wrap subcommands."""
         if parent not in self.subcommands:
@@ -136,7 +200,7 @@ class Radicli:
     def _command(
         self,
         name: str,
-        args: Dict[str, Any],
+        args: Dict[str, Arg],
         registry: Dict[str, Command],
         *,
         allow_extra: bool = False,
@@ -147,72 +211,18 @@ class Radicli:
         def cli_wrapper(cli_func: _CallableT) -> _CallableT:
             if name in registry:
                 raise CommandExistsError(name)
-            cmd = self.make_command(
-                name, args, cli_func, parent=parent, allow_extra=allow_extra
+            registry[name] = Command.from_function(
+                name,
+                args,
+                cli_func,
+                parent=parent,
+                allow_extra=allow_extra,
+                extra_key=self.extra_key,
+                converters=self.converters,
             )
-            registry[name] = cmd
             return cli_func
 
         return cli_wrapper
-
-    def make_command(
-        self,
-        name: str,
-        args: Dict[str, Any],
-        func: Callable,
-        *,
-        parent: Optional[str] = None,
-        allow_extra: bool = False,
-    ) -> Command:
-        sig = signature(func)
-        sig_types = {}
-        sig_defaults = {}
-        for param_name, param_value in sig.parameters.items():
-            annot = param_value.annotation
-            if param_name == self.extra_key:
-                annot = List[str]  # set automatically since we know it
-            elif annot == param_value.empty:
-                annot = str  # default to string for unset types
-            sig_types[param_name] = annot
-            sig_defaults[param_name] = (
-                param_value.default
-                if param_value.default != param_value.empty
-                else DEFAULT_PLACEHOLDER  # placeholder for unset defaults
-            )
-            if param_name not in args:  # support args not in decorator
-                args[param_name] = Arg()
-        cli_args = []
-        for param, arg_info in args.items():
-            if param not in sig_types:  # unknown argument
-                path = join_strings(parent, name)
-                err = f"argument not found in function for '{path}': {param}"
-                raise CliParserError(err)
-
-            def get_converter(arg_type: Type) -> Optional[ConverterType]:
-                return self.converters.get(arg_type, arg_info.converter)
-
-            param_type = sig_types[param]
-            converter = get_converter(param_type)
-            arg_type = converter or param_type
-            arg = get_arg(
-                param,
-                arg_info,
-                arg_type,
-                orig_type=param_type,
-                default=sig_defaults[param],
-                skip_resolve=converter is not None,
-                get_converter=get_converter,
-            )
-            arg.help = join_strings(arg.help, f"({format_type(arg.display_type)})")
-            cli_args.append(arg)
-        return Command(
-            name=name,
-            func=func,
-            args=cli_args,
-            description=func.__doc__,
-            allow_extra=allow_extra,
-            parent=parent,
-        )
 
     def placeholder(self, name: str, *, description: Optional[str] = None) -> None:
         """Add empty parent command placeholder with help for subcommands."""
