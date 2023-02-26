@@ -340,6 +340,21 @@ Internal representation of a CLI command. Can be accessed via `Radicli.commands`
 | `is_placeholder` | `bool`              | Whether the command is a placeholder, created by `Radicli.placeholder`. Checking this can sometimes be useful, e.g. for testing. Defaults to `False`. |
 | `display_name`   | `str`               | The display name including the parent if available, e.g. `parent child`.                                                                              |
 
+#### <kbd>classmethod</kbd> `Command.from_function`
+
+Create a command from a function and its argument annotations and use the type hints and defaults defined in the function to generate the arguments. This is what happens under the hood in the command decorators and it can be used if you need to construct a `Command` manually.
+
+| Argument      | Type                               | Description                                                                                                                                               |
+| ------------- | ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `name`        | `str`                              | The name of the command.                                                                                                                                  |
+| `args`        | `Dict[str, Arg]`                   | The command argument annotation, defined as `Arg` dataclasses.                                                                                            |
+| `func`        | `Callable`                         | The command function.                                                                                                                                     |
+| `parent`      | `Optional[str]`                    | Name of the parent command if command is a subcommand.                                                                                                    |
+| `allow_extra` | `bool`                             | Whether to allow extra arguments.                                                                                                                         |
+| `extra_key`   | `str`                              | Name of function argument that receives extra arguments if the `command_with_extra` or `subcommand_with_extra` decorator is used. Defaults to `"_extra"`. |
+| `converters`  | `Dict[Type, Callable[[str], Any]]` | Dict mapping types to global converter functions.                                                                                                         |
+| **RETURNS**   | `Command`                          | The command.                                                                                                                                              |
+
 ### <kbd>class</kbd> `Radicli`
 
 #### Attributes
