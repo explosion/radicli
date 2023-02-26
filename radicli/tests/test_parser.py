@@ -2,7 +2,7 @@ from typing import List, Iterable, Optional, Union, Literal, Dict, Any
 from enum import Enum
 import pytest
 import argparse
-from radicli import Radicli, Arg
+from radicli import Radicli, Arg, Command
 from radicli.util import get_arg, UnsupportedTypeError, CliParserError
 
 
@@ -177,7 +177,8 @@ BAD_TEST_CASES = [
 )
 def test_parser_good(args, arg_info, expected):
     cli = Radicli()
-    assert cli.parse(args, arg_info) == expected
+    cmd = Command(name="test", func=lambda: None, args=arg_info)
+    assert cli.parse(args, cmd) == expected
 
 
 @pytest.mark.parametrize(
@@ -186,7 +187,8 @@ def test_parser_good(args, arg_info, expected):
 )
 def test_parser_good_with_extra(args, arg_info, expected):
     cli = Radicli(extra_key=EXTRA_KEY)
-    assert cli.parse(args, arg_info, allow_extra=True) == expected
+    cmd = Command(name="test", func=lambda: None, args=arg_info, allow_extra=True)
+    assert cli.parse(args, cmd) == expected
 
 
 @pytest.mark.parametrize(
@@ -197,4 +199,5 @@ def test_parser_bad(args, get_arg_args, expected_error):
     cli = Radicli()
     with pytest.raises(expected_error):
         arg_info = [get_arg(*args) for args in get_arg_args]
-        cli.parse(args, arg_info)
+        cmd = Command(name="test", func=lambda: None, args=arg_info)
+        cli.parse(args, cmd)
