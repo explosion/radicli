@@ -344,16 +344,16 @@ Internal representation of a CLI command. Can be accessed via `Radicli.commands`
 
 Create a command from a function and its argument annotations and use the type hints and defaults defined in the function to generate the arguments. This is what happens under the hood in the command decorators and it can be used if you need to construct a `Command` manually.
 
-| Argument      | Type                               | Description                                                                                                                                               |
-| ------------- | ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `name`        | `str`                              | The name of the command.                                                                                                                                  |
-| `args`        | `Dict[str, Arg]`                   | The command argument annotation, defined as `Arg` dataclasses.                                                                                            |
-| `func`        | `Callable`                         | The command function.                                                                                                                                     |
-| `parent`      | `Optional[str]`                    | Name of the parent command if command is a subcommand.                                                                                                    |
-| `allow_extra` | `bool`                             | Whether to allow extra arguments.                                                                                                                         |
-| `extra_key`   | `str`                              | Name of function argument that receives extra arguments if the `command_with_extra` or `subcommand_with_extra` decorator is used. Defaults to `"_extra"`. |
-| `converters`  | `Dict[Type, Callable[[str], Any]]` | Dict mapping types to global converter functions.                                                                                                         |
-| **RETURNS**   | `Command`                          | The command.                                                                                                                                              |
+| Argument      | Type                               | Description                                                                                                 |
+| ------------- | ---------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `name`        | `str`                              | The name of the command.                                                                                    |
+| `args`        | `Dict[str, Arg]`                   | The command argument annotation, defined as `Arg` dataclasses.                                              |
+| `func`        | `Callable`                         | The command function.                                                                                       |
+| `parent`      | `Optional[str]`                    | Name of the parent command if command is a subcommand.                                                      |
+| `allow_extra` | `bool`                             | Whether to allow extra arguments.                                                                           |
+| `extra_key`   | `str`                              | Name of function argument that receives extra arguments if `allow_extra` is `True`. Defaults to `"_extra"`. |
+| `converters`  | `Dict[Type, Callable[[str], Any]]` | Dict mapping types to global converter functions.                                                           |
+| **RETURNS**   | `Command`                          | The command.                                                                                                |
 
 ### <kbd>class</kbd> `Radicli`
 
