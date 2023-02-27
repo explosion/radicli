@@ -153,9 +153,7 @@ class Radicli:
         self.extra_key = extra_key
         self.commands = {}
         self.subcommands = {}
-        self.errors = expand_error_subclasses(
-            dict(errors) if errors is not None else {}
-        )
+        self.errors = dict(errors) if errors is not None else {}
         self._subcommand_key = "__subcommand__"  # should not conflict with arg name!
         self._help_arg = "--help"
         self._version_arg = "--version"
@@ -281,10 +279,11 @@ class Radicli:
         # Catch specific error types (and their subclasses), and invoke
         # their handler callback. Handlers can return an integer exit code,
         # which will be passed to sys.exit.
+        errors_map = expand_error_subclasses(self.errors)
         try:
             yield
-        except tuple(self.errors.keys()) as e:
-            handler = self.errors[e.__class__]
+        except tuple(errors_map.keys()) as e:
+            handler = errors_map[e.__class__]
             err_code = handler(e)
             if err_code is not None:
                 sys.exit(err_code)
