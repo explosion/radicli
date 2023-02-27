@@ -4,6 +4,7 @@ import sys
 from dataclasses import dataclass
 from inspect import signature
 from pathlib import Path
+from contextlib import contextmanager
 import json
 
 from .parser import ArgumentParser, HelpFormatter
@@ -270,12 +271,17 @@ class Radicli:
         values = self.parse(args, cmd, subcommands)
         sub = values.pop(self._subcommand_key, None)
         func = subcommands[sub].func if sub else cmd.func
+        with self.handle_errors():
+            func(**values)
+
+    @contextmanager
+    def handle_errors(self):
         # Catch specific error types (and their subclasses), and invoke
         # their handler callback. Handlers can return an integer exit code,
         # which will be passed to sys.exit.
         errors_map = expand_error_subclasses(self.errors)
         try:
-            func(**values)
+            yield
         except tuple(errors_map.keys()) as e:
             handler = errors_map[e.__class__]
             err_code = handler(e)
