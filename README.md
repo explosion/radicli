@@ -512,12 +512,13 @@ values = cli.parse(["Alex", "--age", "35"], command)
 command.func(**values)
 ```
 
-| Argument      | Type                 | Description                                                                                  |
-| ------------- | -------------------- | -------------------------------------------------------------------------------------------- |
-| `args`        | `List[str]`          | The string arguments, e.g. what's received from the command line.                            |
-| `command`     | `Command`            | The command.                                                                                 |
-| `subcommands` | `Dict[str, Command]` | Subcommands of the parent command, if available, keyed by subcommand name. Defaults to `{}`. |
-| **RETURNS**   | `Dict[str, Any]`     | The parsed values keyed by argument name that can be passed to the command function.         |
+| Argument        | Type                 | Description                                                                                                            |
+| --------------- | -------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `args`          | `List[str]`          | The string arguments, e.g. what's received from the command line.                                                      |
+| `command`       | `Command`            | The command.                                                                                                           |
+| `subcommands`   | `Dict[str, Command]` | Subcommands of the parent command, if available, keyed by subcommand name. Defaults to `{}`.                           |
+| `allow_partial` | `bool`               | Allow partial parsing and still return the parsed values, even if required arguments are missing. Defaults to `False`. |
+| **RETURNS**     | `Dict[str, Any]`     | The parsed values keyed by argument name that can be passed to the command function.                                   |
 
 #### <kbd>method</kbd> `Radicli.to_static`
 

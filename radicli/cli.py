@@ -332,6 +332,8 @@ class Radicli:
         args: List[str],
         command: Command,
         subcommands: Dict[str, Command] = SimpleFrozenDict(),
+        *,
+        allow_partial: bool = False,
     ) -> Dict[str, Any]:
         """Parse a list of arguments. Can also be used for testing."""
         p, subparsers = self.get_parsers(command, subcommands)
@@ -341,13 +343,13 @@ class Radicli:
         values = {**vars(namespace), self.extra_key: extra}
         sub_key = values.pop(self._subcommand_key, None)
         if not sub_key:  # we're not in a subcommand
-            return self._validate(command, values)
+            return self._validate(command, values, allow_partial=allow_partial)
         if sub_key not in subparsers:
             raise CliParserError(f"invalid subcommand: '{sub_key}'")
         subparser, subcmd = subparsers[cast(str, sub_key)]
         sub_namespace, sub_extra = subparser.parse_known_args(args[1:])
         sub_values = {**vars(sub_namespace), self.extra_key: sub_extra}
-        sub_values = self._validate(subcmd, sub_values)
+        sub_values = self._validate(subcmd, sub_values, allow_partial=allow_partial)
         return {**sub_values, self._subcommand_key: sub_key}
 
     def _add_args(self, parser: ArgumentParser, args: List[ArgparseArg]) -> None:
@@ -358,7 +360,9 @@ class Radicli:
             func_args, func_kwargs = arg.to_argparse()
             parser.add_argument(*func_args, **func_kwargs)
 
-    def _validate(self, command: Command, values: Dict[str, Any]) -> Dict[str, Any]:
+    def _validate(
+        self, command: Command, values: Dict[str, Any], allow_partial: bool = False
+    ) -> Dict[str, Any]:
         """
         Validate required args separately to avoid subparser conflicts.
         Handle extra arguments and raise error if needed. We're doing this
@@ -373,7 +377,7 @@ class Radicli:
         for arg in command.args:
             if arg.id not in values or values[arg.id] is DEFAULT_PLACEHOLDER:
                 required.append(arg.arg.option or arg.id)
-        if required:
+        if required and not allow_partial:
             err = f"the following arguments are required: {', '.join(required)}"
             raise CliParserError(err)
         return values
