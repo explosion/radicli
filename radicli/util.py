@@ -343,7 +343,9 @@ def stringify_type(arg_type: Any) -> Optional[str]:
     """Get a pretty-printed string for a type."""
     if isinstance(arg_type, str) or arg_type is None:
         return arg_type
-    if hasattr(arg_type, "__name__"):
+    # Only use name for callables because __name__ is internals and
+    # inconsistent for typing module
+    if callable(arg_type) and hasattr(arg_type, "__name__"):
         return arg_type.__name__
     type_str = str(arg_type)
     split_type = type_str.rsplit(".", 1)
