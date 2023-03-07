@@ -1,4 +1,4 @@
-from typing import List, Iterator, Optional, Literal, TypeVar, Generic, Type
+from typing import List, Iterator, Optional, Literal, TypeVar, Generic, Type, Union
 from enum import Enum
 from uuid import UUID
 from dataclasses import dataclass
@@ -9,7 +9,7 @@ import tempfile
 import shutil
 from pathlib import Path
 from radicli import Radicli, StaticRadicli, Arg, get_arg, ArgparseArg
-from radicli.util import CommandNotFoundError, CliParserError, ArgTypeType
+from radicli.util import CommandNotFoundError, CliParserError
 from radicli.util import ExistingPath, ExistingFilePath, ExistingDirPath
 from radicli.util import ExistingFilePathOrDash, DEFAULT_CONVERTERS
 from radicli.util import stringify_type
@@ -303,12 +303,14 @@ def test_cli_global_converters():
     assert ran
 
 
+_KindT = TypeVar("_KindT", bound=Union[str, int, float, Path])
+
+
+class CustomGeneric(Generic[_KindT]):
+    ...
+
+
 def test_cli_converters_generics():
-    _KindT = TypeVar("_KindT", bound=str)
-
-    class CustomGeneric(Generic[_KindT]):
-        ...
-
     converters = {CustomGeneric: lambda value: f"generic: {value}"}
     cli = Radicli(converters=converters)
     ran = False
@@ -861,34 +863,72 @@ def test_static_deserialize_types(arg_type):
     assert new_arg.action == arg.action
 
 
-def test_static_deserialize_types_custom_deserialize():
+@pytest.mark.parametrize(
+    "arg_type",
+    [
+        UUID,
+        List[str],
+        Optional[UUID],
+        Union[UUID, str],
+        CustomGeneric,
+        CustomGeneric[int],
+        CustomGeneric[str],
+        Optional[CustomGeneric],
+    ],
+)
+def test_static_deserialize_types_custom_deserialize(arg_type):
     """Test deserialization with custom type deserializer"""
+
+    def split_string(text: str) -> List[str]:
+        return [t.strip() for t in text.split(",")] if text else []
 
     def convert_uuid(value: str) -> UUID:
         return UUID(value)
 
-    def deserialize(arg_type: Optional[str]) -> ArgTypeType:
-        if arg_type == "UUID":
-            return convert_uuid
-        return str
+    def convert_generic(value: str) -> str:
+        return f"generic: {value}"
 
-    converters = {UUID: convert_uuid}
+    converters = {
+        UUID: convert_uuid,
+        List[str]: split_string,
+        CustomGeneric: convert_generic,
+        CustomGeneric[str]: str,
+    }
     get_converter = lambda v: converters.get(v)
-    # With deserialize function set
+    # With converters set
     arg = get_arg(
-        "test", Arg("--test"), UUID, orig_type=UUID, get_converter=get_converter
+        "test", Arg("--test"), arg_type, orig_type=arg_type, get_converter=get_converter
     )
     arg_json = arg.to_static_json()
-    new_arg = ArgparseArg.from_static_json(arg_json, deserialize_type=deserialize)
+    new_arg = ArgparseArg.from_static_json(arg_json, converters=converters)
     assert new_arg.type == arg.type
     assert new_arg.orig_type == stringify_type(arg.orig_type)
     assert new_arg.has_converter == arg.has_converter
     assert new_arg.action == arg.action
-    # With no deserialize function set
+    # With no converters set
     arg = get_arg(
-        "test", Arg("--test"), UUID, orig_type=UUID, get_converter=get_converter
+        "test", Arg("--test"), arg_type, orig_type=arg_type, get_converter=get_converter
     )
     arg_json = arg.to_static_json()
     new_arg = ArgparseArg.from_static_json(arg_json)
     assert new_arg.type is str
     assert new_arg.orig_type == stringify_type(arg.orig_type)
+
+
+@pytest.mark.parametrize(
+    "arg_type,expected",
+    [
+        (str, "str"),
+        (bool, "bool"),
+        (Path, "Path"),
+        (List[int], "List[int]"),
+        (CustomGeneric, "CustomGeneric"),
+        (CustomGeneric[str], "CustomGeneric[str]"),
+        (UUID, "UUID"),
+        (shutil.rmtree, "rmtree"),
+        ("foo.bar", "foo.bar"),
+        (None, None),
+    ],
+)
+def test_stringify_type(arg_type, expected):
+    assert stringify_type(arg_type) == expected

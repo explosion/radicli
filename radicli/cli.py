@@ -12,7 +12,7 @@ from .util import Arg, ArgparseArg, get_arg, join_strings, format_type, format_t
 from .util import format_arg_help, expand_error_subclasses, SimpleFrozenDict
 from .util import CommandNotFoundError, CliParserError, CommandExistsError
 from .util import ConverterType, ConvertersType, ErrorHandlersType, StaticCommand
-from .util import StaticData, DeserializeType, DEFAULT_CONVERTERS, DEFAULT_PLACEHOLDER
+from .util import StaticData, DEFAULT_CONVERTERS, DEFAULT_PLACEHOLDER
 
 
 _CallableT = TypeVar("_CallableT", bound=Callable)
@@ -48,15 +48,14 @@ class Command:
     def from_static_json(
         cls,
         data: StaticCommand,
-        deserialize_type: Optional[DeserializeType] = None,
+        converters: ConvertersType = SimpleFrozenDict(),
     ) -> "Command":
         """Initialize the static command from a JSON-serializable dict."""
         return cls(
             name=data["name"],
             func=lambda *args, **kwargs: None,  # dummy function for static use
             args=[
-                ArgparseArg.from_static_json(arg, deserialize_type=deserialize_type)
-                for arg in data["args"]
+                ArgparseArg.from_static_json(arg, converters) for arg in data["args"]
             ],
             description=data["description"],
             allow_extra=data["allow_extra"],

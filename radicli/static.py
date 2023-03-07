@@ -3,7 +3,7 @@ from pathlib import Path
 import json
 
 from .cli import Radicli, Command
-from .util import StaticData, DeserializeType
+from .util import StaticData, ConvertersType, SimpleFrozenDict
 
 
 class StaticRadicli(Radicli):
@@ -16,7 +16,7 @@ class StaticRadicli(Radicli):
         data: StaticData,
         disable: bool = False,
         debug: bool = False,
-        deserialize_type: Optional[DeserializeType] = None,
+        converters: ConvertersType = SimpleFrozenDict(),
     ) -> None:
         super().__init__(
             prog=data["prog"],
@@ -25,12 +25,12 @@ class StaticRadicli(Radicli):
             extra_key=data["extra_key"],
         )
         self.commands = {
-            name: Command.from_static_json(cmd, deserialize_type=deserialize_type)
+            name: Command.from_static_json(cmd, converters)
             for name, cmd in data["commands"].items()
         }
         self.subcommands = {
             parent: {
-                name: Command.from_static_json(sub, deserialize_type=deserialize_type)
+                name: Command.from_static_json(sub, converters)
                 for name, sub in subs.items()
             }
             for parent, subs in data["subcommands"].items()
@@ -61,7 +61,7 @@ class StaticRadicli(Radicli):
         file_path: Union[str, Path],
         debug: bool = False,
         disable: bool = False,
-        deserialize_type: Optional[DeserializeType] = None,
+        converters: ConvertersType = SimpleFrozenDict(),
     ) -> "StaticRadicli":
         """Load the static CLI from a file path created with Radicli.to_static."""
         path = Path(file_path)
@@ -69,6 +69,4 @@ class StaticRadicli(Radicli):
             raise ValueError(f"Not a valid file path: {path}")
         with path.open("r", encoding="utf8") as f:
             data = json.load(f)
-        return cls(
-            data, disable=disable, debug=debug, deserialize_type=deserialize_type
-        )
+        return cls(data, disable=disable, debug=debug, converters=converters)

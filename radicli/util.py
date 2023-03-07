@@ -18,7 +18,6 @@ BASE_TYPES = list(BASE_TYPES_MAP.values())
 ConverterType = Callable[[str], Any]
 ConvertersType = Dict[Union[Type, object], ConverterType]
 ArgTypeType = Optional[Union[Type, ConverterType]]
-DeserializeType = Callable[[Optional[str]], ArgTypeType]
 _Exc = TypeVar("_Exc", bound=Exception, covariant=True)
 ErrorHandlerType = Callable[[Exception], Optional[int]]
 ErrorHandlersType = Dict[Type[_Exc], Callable[[_Exc], Optional[int]]]
@@ -54,6 +53,26 @@ class StaticData(TypedDict):
     extra_key: str
     commands: Dict[str, StaticCommand]
     subcommands: Dict[str, Dict[str, StaticCommand]]
+
+
+class SimpleFrozenDict(dict):
+    """Simplified implementation of a frozen dict, mainly used as default
+    function or method argument (for arguments that should default to empty
+    dictionary).
+    """
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.error = "Can't write to frozen dict. This is likely an internal error."
+
+    def __setitem__(self, key, value):
+        raise NotImplementedError(self.error)
+
+    def pop(self, key: Any, default=None):
+        raise NotImplementedError(self.error)
+
+    def update(self, other, **kwargs):
+        raise NotImplementedError(self.error)
 
 
 class CliParserError(SystemExit):
@@ -173,13 +192,13 @@ class ArgparseArg:
     def from_static_json(
         cls,
         data: StaticArg,
-        deserialize_type: Optional[DeserializeType] = None,
+        converters: ConvertersType = SimpleFrozenDict(),
     ) -> "ArgparseArg":
         """Initialize the static argument from a JSON-serializable dict."""
         return ArgparseArg(
             id=data["id"],
             arg=Arg(data["option"], data["short"], help=data["orig_help"]),
-            type=_deserialize_type(data, deserialize_type),
+            type=deserialize_type(data, converters),
             orig_type=data["orig_type"],
             default=DEFAULT_PLACEHOLDER
             if data["default"] == DEFAULT_PLACEHOLDER
@@ -191,9 +210,9 @@ class ArgparseArg:
         )
 
 
-def _deserialize_type(
+def deserialize_type(
     data: StaticArg,
-    deserialize: Optional[DeserializeType] = None,
+    converters: ConvertersType = SimpleFrozenDict(),
 ) -> ArgTypeType:
     # Setting some common defaults here to handle out-of-the-box
     if data["type"] is None:
@@ -207,8 +226,15 @@ def _deserialize_type(
         return types_map[data["type"]]
     # Handle unknown types: we use the orig_type here, since this corresponds to
     # what was actually set as an argument type hint
-    if deserialize is not None:
-        return deserialize(data["orig_type"])
+    orig_type = data["orig_type"]
+    if orig_type is None:
+        return None
+    converters_map = {stringify_type(k): v for k, v in converters.items()}
+    if orig_type in converters_map:
+        return converters_map[orig_type]
+    # Hacky check for generics
+    if "[" in orig_type and orig_type.split("[", 1)[0] in converters_map:
+        return converters_map[orig_type.split("[", 1)[0]]
     return str
 
 
@@ -260,6 +286,7 @@ def get_arg(
                 param,
                 orig_arg,
                 arg_types[0],
+                orig_type=arg_types[0],
                 default=default,
                 get_converter=get_converter,
             )
@@ -319,8 +346,8 @@ def stringify_type(arg_type: Any) -> Optional[str]:
     if hasattr(arg_type, "__name__"):
         return arg_type.__name__
     type_str = str(arg_type)
-    # Strip out typing for built-in types, leave path for custom
-    return type_str.replace("typing.", "")
+    split_type = type_str.rsplit(".", 1)
+    return split_type[1] if len(split_type) == 2 else type_str
 
 
 def format_type(arg_type: Any) -> Optional[str]:
@@ -433,23 +460,3 @@ DEFAULT_CONVERTERS: ConvertersType = {
     ExistingDirPathOrDash: convert_existing_dir_path_or_dash,
     PathOrDash: convert_path_or_dash,
 }
-
-
-class SimpleFrozenDict(dict):
-    """Simplified implementation of a frozen dict, mainly used as default
-    function or method argument (for arguments that should default to empty
-    dictionary).
-    """
-
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
-        self.error = "Can't write to frozen dict. This is likely an internal error."
-
-    def __setitem__(self, key, value):
-        raise NotImplementedError(self.error)
-
-    def pop(self, key: Any, default=None):
-        raise NotImplementedError(self.error)
-
-    def update(self, other, **kwargs):
-        raise NotImplementedError(self.error)
