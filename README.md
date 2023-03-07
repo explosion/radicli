@@ -566,11 +566,12 @@ Load the static CLI from a JSON file generated with `Radicli.to_static`.
 static = StaticRadicli.load("./static.json")
 ```
 
-| Argument    | Type               | Description                                                                                                                                                                  |
-| ----------- | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `file_path` | `Union[str, Path]` | The JSON file to load.                                                                                                                                                       |
-| `disable`   | `bool`             | Whether to disable static parsing. Can be useful during development. Defaults to `False`.                                                                                    |
-| `debug`     | `bool`             | Enable debugging mode and print an additional start and optional end marker (if the static CLI didn't exit before) to indicate that the static CLI ran. Defaults to `False`. |
+| Argument           | Type                 | Description                                                                                                                                                                                                      |
+| ------------------ | -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `file_path`        | `Union[str, Path]`   | The JSON file to load.                                                                                                                                                                                           |
+| `disable`          | `bool`               | Whether to disable static parsing. Can be useful during development. Defaults to `False`.                                                                                                                        |
+| `debug`            | `bool`               | Enable debugging mode and print an additional start and optional end marker (if the static CLI didn't exit before) to indicate that the static CLI ran. Defaults to `False`.                                     |
+| `deserialize_type` | `Optional[Callable]` | Optional callback to deserialize custom argument types. Is called on unknown types and will receive the string name of the type, e.g. `"UUID"`, and should return a callable type, converter function or `None`. |
 
 #### <kbd>method</kbd> `StaticRadicli.__init__`
 
@@ -581,11 +582,12 @@ data = cli.to_static_json()
 static = StaticRadicli(data)
 ```
 
-| Argument  | Type             | Description                                                                                                                                                                  |
-| --------- | ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `data`    | `Dict[str, Any]` | The static data.                                                                                                                                                             |
-| `disable` | `bool`           | Whether to disable static parsing. Can be useful during development. Defaults to `False`.                                                                                    |
-| `debug`   | `bool`           | Enable debugging mode and print an additional start and optional end marker (if the static CLI didn't exit before) to indicate that the static CLI ran. Defaults to `False`. |
+| Argument           | Type                 | Description                                                                                                                                                                                                      |
+| ------------------ | -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `data`             | `Dict[str, Any]`     | The static data.                                                                                                                                                                                                 |
+| `disable`          | `bool`               | Whether to disable static parsing. Can be useful during development. Defaults to `False`.                                                                                                                        |
+| `debug`            | `bool`               | Enable debugging mode and print an additional start and optional end marker (if the static CLI didn't exit before) to indicate that the static CLI ran. Defaults to `False`.                                     |
+| `deserialize_type` | `Optional[Callable]` | Optional callback to deserialize custom argument types. Is called on unknown types and will receive the string name of the type, e.g. `"UUID"`, and should return a callable type, converter function or `None`. |
 
 #### <kbd>method</kbd> `StaticRadicli.run`
 

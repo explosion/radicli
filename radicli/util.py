@@ -13,9 +13,12 @@ except ImportError:
     from collections import Iterable as IterableType  # type: ignore
 
 DEFAULT_PLACEHOLDER = argparse.SUPPRESS
-BASE_TYPES = [str, int, float, Path]
+BASE_TYPES_MAP = {"str": str, "int": int, "float": float, "Path": Path}
+BASE_TYPES = list(BASE_TYPES_MAP.values())
 ConverterType = Callable[[str], Any]
 ConvertersType = Dict[Union[Type, object], ConverterType]
+ArgTypeType = Optional[Union[Type, ConverterType]]
+DeserializeType = Callable[[Optional[str]], ArgTypeType]
 _Exc = TypeVar("_Exc", bound=Exception, covariant=True)
 ErrorHandlerType = Callable[[Exception], Optional[int]]
 ErrorHandlersType = Dict[Type[_Exc], Callable[[_Exc], Optional[int]]]
@@ -31,6 +34,8 @@ class StaticArg(TypedDict):
     action: Optional[str]
     choices: Optional[List[str]]
     has_converter: bool
+    type: Optional[str]
+    orig_type: Optional[str]
 
 
 class StaticCommand(TypedDict):
@@ -107,8 +112,8 @@ class ArgparseArg:
 
     id: str
     arg: Arg
-    type: Optional[Union[Type, Callable[[str], Any]]] = None
-    orig_type: Optional[Union[Type, Callable[[str], Any]]] = None
+    type: ArgTypeType = None
+    orig_type: Union[ArgTypeType, str] = None
     default: Any = DEFAULT_PLACEHOLDER
     # We modify the help to add types so we store it twice to store old and new
     help: Optional[str] = None
@@ -117,7 +122,7 @@ class ArgparseArg:
     has_converter: bool = False
 
     @property
-    def display_type(self) -> Optional[Union[Type, Callable[[str], Any]]]:
+    def display_type(self) -> Union[ArgTypeType, str]:
         default_type = self.type if self.type is not None else self.orig_type
         return self.orig_type if self.has_converter else default_type
 
@@ -160,16 +165,22 @@ class ArgparseArg:
             if self.choices
             else None,
             "has_converter": self.has_converter,
+            "type": stringify_type(self.type),
+            "orig_type": stringify_type(self.orig_type),
         }
 
     @classmethod
-    def from_static_json(cls, data: StaticArg) -> "ArgparseArg":
+    def from_static_json(
+        cls,
+        data: StaticArg,
+        deserialize_type: Optional[DeserializeType] = None,
+    ) -> "ArgparseArg":
         """Initialize the static argument from a JSON-serializable dict."""
         return ArgparseArg(
             id=data["id"],
             arg=Arg(data["option"], data["short"], help=data["orig_help"]),
-            type=str if not data["action"] else None,  # dummy, not used
-            orig_type=str if not data["action"] else None,  # dummy, not used
+            type=_deserialize_type(data, deserialize_type),
+            orig_type=data["orig_type"],
             default=DEFAULT_PLACEHOLDER
             if data["default"] == DEFAULT_PLACEHOLDER
             else data["default"],
@@ -180,12 +191,33 @@ class ArgparseArg:
         )
 
 
+def _deserialize_type(
+    data: StaticArg,
+    deserialize: Optional[DeserializeType] = None,
+) -> ArgTypeType:
+    # Setting some common defaults here to handle out-of-the-box
+    if data["type"] is None:
+        return None
+    types_map = {**BASE_TYPES_MAP}
+    for value in DEFAULT_CONVERTERS.values():
+        types_map[stringify_type(value)] = value  # type: ignore
+    if data["action"] in ("store_true", "count"):  # special args with no type
+        return None
+    if data["type"] in types_map:
+        return types_map[data["type"]]
+    # Handle unknown types: we use the orig_type here, since this corresponds to
+    # what was actually set as an argument type hint
+    if deserialize is not None:
+        return deserialize(data["orig_type"])
+    return str
+
+
 def get_arg(
     param: str,
     orig_arg: Arg,
     param_type: Any,
     *,
-    orig_type: Optional[Union[Type, Callable[[str], Any]]] = None,
+    orig_type: Union[ArgTypeType, str] = None,
     default: Optional[Any] = DEFAULT_PLACEHOLDER,
     get_converter: Optional[Callable[[Type], Optional[ConverterType]]] = None,
     skip_resolve: bool = False,
@@ -280,15 +312,23 @@ def find_base_type(
     return default_type
 
 
-def format_type(arg_type: Any) -> str:
+def stringify_type(arg_type: Any) -> Optional[str]:
     """Get a pretty-printed string for a type."""
-    if isinstance(arg_type, type(NewType)) and hasattr(arg_type, "__supertype__"):  # type: ignore
-        return f"{arg_type.__name__} ({format_type(arg_type.__supertype__)})"  # type: ignore
+    if isinstance(arg_type, str) or arg_type is None:
+        return arg_type
     if hasattr(arg_type, "__name__"):
         return arg_type.__name__
     type_str = str(arg_type)
     # Strip out typing for built-in types, leave path for custom
     return type_str.replace("typing.", "")
+
+
+def format_type(arg_type: Any) -> Optional[str]:
+    """Get a pretty-printed string for a type."""
+    type_str = stringify_type(arg_type)
+    if isinstance(arg_type, type(NewType)) and hasattr(arg_type, "__supertype__"):  # type: ignore
+        return f"{type_str} {arg_type.__name__}"  # type: ignore
+    return type_str
 
 
 def join_strings(*strings: Optional[str], char: str = " ") -> str:

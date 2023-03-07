@@ -1,5 +1,6 @@
 from typing import List, Iterator, Optional, Literal, TypeVar, Generic, Type
 from enum import Enum
+from uuid import UUID
 from dataclasses import dataclass
 import pytest
 import sys
@@ -7,10 +8,11 @@ from contextlib import contextmanager
 import tempfile
 import shutil
 from pathlib import Path
-from radicli import Radicli, StaticRadicli, Arg
-from radicli.util import CommandNotFoundError, CliParserError
+from radicli import Radicli, StaticRadicli, Arg, get_arg, ArgparseArg
+from radicli.util import CommandNotFoundError, CliParserError, ArgTypeType
 from radicli.util import ExistingPath, ExistingFilePath, ExistingDirPath
-from radicli.util import ExistingFilePathOrDash
+from radicli.util import ExistingFilePathOrDash, DEFAULT_CONVERTERS
+from radicli.util import stringify_type
 
 
 @contextmanager
@@ -827,3 +829,66 @@ def test_cli_static_roundtrip(capsys):
     static.run(["", "hello", "--help"])
     captured = capsys.readouterr().out
     assert not captured
+
+
+@pytest.mark.parametrize(
+    "arg_type",
+    [
+        str,
+        int,
+        float,
+        bool,
+        List[str],
+        Path,
+        ExistingPath,
+        ExistingFilePath,
+        ExistingDirPath,
+        ExistingFilePathOrDash,
+        Literal["a", "b", "c"],
+    ],
+)
+def test_static_deserialize_types(arg_type):
+    """Test that supported and built-in types are correctly deserialized from static"""
+    get_converter = lambda v: DEFAULT_CONVERTERS.get(v)
+    arg = get_arg(
+        "test", Arg("--test"), arg_type, orig_type=arg_type, get_converter=get_converter
+    )
+    arg_json = arg.to_static_json()
+    new_arg = ArgparseArg.from_static_json(arg_json)
+    assert new_arg.type == arg.type
+    assert new_arg.orig_type == stringify_type(arg.orig_type)
+    assert new_arg.has_converter == arg.has_converter
+    assert new_arg.action == arg.action
+
+
+def test_static_deserialize_types_custom_deserialize():
+    """Test deserialization with custom type deserializer"""
+
+    def convert_uuid(value: str) -> UUID:
+        return UUID(value)
+
+    def deserialize(arg_type: Optional[str]) -> ArgTypeType:
+        if arg_type == "UUID":
+            return convert_uuid
+        return str
+
+    converters = {UUID: convert_uuid}
+    get_converter = lambda v: converters.get(v)
+    # With deserialize function set
+    arg = get_arg(
+        "test", Arg("--test"), UUID, orig_type=UUID, get_converter=get_converter
+    )
+    arg_json = arg.to_static_json()
+    new_arg = ArgparseArg.from_static_json(arg_json, deserialize_type=deserialize)
+    assert new_arg.type == arg.type
+    assert new_arg.orig_type == stringify_type(arg.orig_type)
+    assert new_arg.has_converter == arg.has_converter
+    assert new_arg.action == arg.action
+    # With no deserialize function set
+    arg = get_arg(
+        "test", Arg("--test"), UUID, orig_type=UUID, get_converter=get_converter
+    )
+    arg_json = arg.to_static_json()
+    new_arg = ArgparseArg.from_static_json(arg_json)
+    assert new_arg.type is str
+    assert new_arg.orig_type == stringify_type(arg.orig_type)
