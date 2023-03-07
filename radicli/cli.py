@@ -45,12 +45,18 @@ class Command:
         }
 
     @classmethod
-    def from_static_json(cls, data: StaticCommand) -> "Command":
+    def from_static_json(
+        cls,
+        data: StaticCommand,
+        converters: ConvertersType = SimpleFrozenDict(),
+    ) -> "Command":
         """Initialize the static command from a JSON-serializable dict."""
         return cls(
             name=data["name"],
             func=lambda *args, **kwargs: None,  # dummy function for static use
-            args=[ArgparseArg.from_static_json(arg) for arg in data["args"]],
+            args=[
+                ArgparseArg.from_static_json(arg, converters) for arg in data["args"]
+            ],
             description=data["description"],
             allow_extra=data["allow_extra"],
             parent=data["parent"],
