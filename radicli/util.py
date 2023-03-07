@@ -1,5 +1,6 @@
 from typing import Any, Callable, Iterable, Type, Union, Optional, Dict, Tuple
-from typing import List, Literal, NewType, get_args, get_origin, TypeVar, TypedDict
+from typing import List, Literal, NewType, get_args, get_origin, TypeVar
+from typing import TypedDict, cast
 from enum import Enum
 from dataclasses import dataclass
 from pathlib import Path
@@ -351,7 +352,7 @@ def stringify_type(arg_type: Any) -> Optional[str]:
         if args:
             # Built-in generic types are callables in Python 3.10+ so we want to
             # preserve args here and stringify them, too
-            type_args = [stringify_type(arg) for arg in args]
+            type_args = cast(List[str], [stringify_type(arg) for arg in args])
             type_str = f"{type_str}[{', '.join(type_args)}]"
         return type_str
     type_str = str(arg_type)
