@@ -233,8 +233,10 @@ def deserialize_type(
     if orig_type in converters_map:
         return converters_map[orig_type]
     # Hacky check for generics
-    if "[" in orig_type and orig_type.split("[", 1)[0] in converters_map:
-        return converters_map[orig_type.split("[", 1)[0]]
+    if "[" in orig_type:
+        origin = orig_type.split("[", 1)[0]
+        if origin in converters_map:
+            return converters_map[orig_type.split("[", 1)[0]]
     return str
 
 
@@ -343,10 +345,15 @@ def stringify_type(arg_type: Any) -> Optional[str]:
     """Get a pretty-printed string for a type."""
     if isinstance(arg_type, str) or arg_type is None:
         return arg_type
-    # Only use name for callables because __name__ is internals and
-    # inconsistent for typing module
-    if callable(arg_type) and hasattr(arg_type, "__name__"):
-        return arg_type.__name__
+    if hasattr(arg_type, "__name__"):
+        type_str = arg_type.__name__
+        args = get_args(arg_type)
+        if args:
+            # Built-in generic types are callables in Python 3.10+ so we want to
+            # preserve args here and stringify them, too
+            type_args = [stringify_type(arg) for arg in args]
+            type_str = f"{type_str}[{', '.join(type_args)}]"
+        return type_str
     type_str = str(arg_type)
     split_type = type_str.rsplit(".", 1)
     return split_type[1] if len(split_type) == 2 else type_str
