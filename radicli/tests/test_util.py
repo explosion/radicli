@@ -1,0 +1,55 @@
+from typing import Union, Generic, List, TypeVar
+from pathlib import Path
+from uuid import UUID
+import pytest
+import shutil
+from radicli.util import stringify_type, get_list_converter
+
+_KindT = TypeVar("_KindT", bound=Union[str, int, float, Path])
+
+
+class CustomGeneric(Generic[_KindT]):
+    ...
+
+
+@pytest.mark.parametrize(
+    "arg_type,expected",
+    [
+        (str, "str"),
+        (bool, "bool"),
+        (Path, "Path"),
+        (List[int], "List[int]"),
+        (CustomGeneric, "CustomGeneric"),
+        (CustomGeneric[str], "CustomGeneric[str]"),
+        (UUID, "UUID"),
+        (shutil.rmtree, "rmtree"),
+        ("foo.bar", "foo.bar"),
+        (None, None),
+    ],
+)
+def test_stringify_type(arg_type, expected):
+    assert stringify_type(arg_type) == expected
+
+
+@pytest.mark.parametrize(
+    "item_type,value,expected",
+    [
+        # Separated string
+        (str, "hello, world,test", ["hello", "world", "test"]),
+        (int, " 1,2,3 ", [1, 2, 3]),
+        (float, "0.123,5,  1.234", [0.123, 5.0, 1.234]),
+        # Quoted list
+        (str, "[hello, world]", ["hello", "world"]),
+        (str, '["hello", "world"]', ["hello", "world"]),
+        (str, "['hello', 'world']", ["hello", "world"]),
+        (int, "[1,2,3]", [1, 2, 3]),
+        (int, '["1","2","3"]', [1, 2, 3]),
+        (int, "['1','2','3']", [1, 2, 3]),
+        (float, "[0.23,2,3.45]", [0.23, 2.0, 3.45]),
+        (float, '["0.23","2","3.45"]', [0.23, 2.0, 3.45]),
+        (float, "['0.23','2','3.45']", [0.23, 2.0, 3.45]),
+    ],
+)
+def test_get_list_converter(item_type, value, expected):
+    converter = get_list_converter(item_type)
+    assert converter(value) == expected

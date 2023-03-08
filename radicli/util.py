@@ -411,8 +411,21 @@ _InT = TypeVar("_InT", bound=Union[str, int, float])
 def get_list_converter(
     type_func: Callable[[Any], _InT] = str, delimiter: str = ","
 ) -> Callable[[str], List[_InT]]:
-    def converter(text: str) -> List[_InT]:
-        return [type_func(t.strip()) for t in text.split(delimiter)] if text else []
+    def converter(value: str) -> List[_InT]:
+        if not value:
+            return []
+        if value.startswith("[") and value.endswith("]"):
+            value = value[1:-1]
+        result = []
+        for p in value.split(delimiter):
+            p = p.strip()
+            if p.startswith("'") and p.endswith("'"):
+                p = p[1:-1]
+            if p.startswith('"') and p.endswith('"'):
+                p = p[1:-1]
+            p = type_func(p.strip())
+            result.append(p)
+        return result
 
     return converter
 

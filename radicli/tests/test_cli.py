@@ -1,6 +1,5 @@
 from typing import List, Iterator, Optional, Literal, TypeVar, Generic, Type, Union
 from enum import Enum
-from uuid import UUID
 from dataclasses import dataclass
 import pytest
 import sys
@@ -913,22 +912,3 @@ def test_static_deserialize_types_custom_deserialize(arg_type):
     new_arg = ArgparseArg.from_static_json(arg_json)
     assert new_arg.type is str
     assert new_arg.orig_type == stringify_type(arg.orig_type)
-
-
-@pytest.mark.parametrize(
-    "arg_type,expected",
-    [
-        (str, "str"),
-        (bool, "bool"),
-        (Path, "Path"),
-        (List[int], "List[int]"),
-        (CustomGeneric, "CustomGeneric"),
-        (CustomGeneric[str], "CustomGeneric[str]"),
-        (UUID, "UUID"),
-        (shutil.rmtree, "rmtree"),
-        ("foo.bar", "foo.bar"),
-        (None, None),
-    ],
-)
-def test_stringify_type(arg_type, expected):
-    assert stringify_type(arg_type) == expected
