@@ -1,18 +1,18 @@
 from typing import List, Iterator, Optional, Literal, TypeVar, Generic, Type, Union
 from enum import Enum
-from uuid import UUID
 from dataclasses import dataclass
 import pytest
 import sys
 from contextlib import contextmanager
 import tempfile
 import shutil
+from zipfile import ZipFile
 from pathlib import Path
 from radicli import Radicli, StaticRadicli, Arg, get_arg, ArgparseArg
 from radicli.util import CommandNotFoundError, CliParserError
 from radicli.util import ExistingPath, ExistingFilePath, ExistingDirPath
 from radicli.util import ExistingFilePathOrDash, DEFAULT_CONVERTERS
-from radicli.util import stringify_type
+from radicli.util import stringify_type, get_list_converter
 
 
 @contextmanager
@@ -866,10 +866,10 @@ def test_static_deserialize_types(arg_type):
 @pytest.mark.parametrize(
     "arg_type",
     [
-        UUID,
         List[str],
-        Optional[UUID],
-        Union[UUID, str],
+        ZipFile,
+        Optional[ZipFile],
+        Union[ZipFile, str, Path],
         CustomGeneric,
         CustomGeneric[int],
         CustomGeneric[str],
@@ -879,17 +879,16 @@ def test_static_deserialize_types(arg_type):
 def test_static_deserialize_types_custom_deserialize(arg_type):
     """Test deserialization with custom type deserializer"""
 
-    def split_string(text: str) -> List[str]:
-        return [t.strip() for t in text.split(",")] if text else []
+    split_string = get_list_converter(str)
 
-    def convert_uuid(value: str) -> UUID:
-        return UUID(value)
+    def convert_zipfile(value: str) -> ZipFile:
+        return ZipFile(value, "r")
 
     def convert_generic(value: str) -> str:
         return f"generic: {value}"
 
     converters = {
-        UUID: convert_uuid,
+        ZipFile: convert_zipfile,  # new type with custom converter
         List[str]: split_string,
         CustomGeneric: convert_generic,
         CustomGeneric[str]: str,
@@ -913,22 +912,3 @@ def test_static_deserialize_types_custom_deserialize(arg_type):
     new_arg = ArgparseArg.from_static_json(arg_json)
     assert new_arg.type is str
     assert new_arg.orig_type == stringify_type(arg.orig_type)
-
-
-@pytest.mark.parametrize(
-    "arg_type,expected",
-    [
-        (str, "str"),
-        (bool, "bool"),
-        (Path, "Path"),
-        (List[int], "List[int]"),
-        (CustomGeneric, "CustomGeneric"),
-        (CustomGeneric[str], "CustomGeneric[str]"),
-        (UUID, "UUID"),
-        (shutil.rmtree, "rmtree"),
-        ("foo.bar", "foo.bar"),
-        (None, None),
-    ],
-)
-def test_stringify_type(arg_type, expected):
-    assert stringify_type(arg_type) == expected

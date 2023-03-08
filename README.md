@@ -608,7 +608,7 @@ if __name__ == "__main__":
 
 ### Custom types and converters
 
-The package includes several custom types implemented as `TypeVar`s with pre-defined converter functions. If these custom types are used in the decorated function, the values received from the CLI will be converted and validated accordingly.
+The package includes several converters enabled by default, as well as custom types implemented as `NewType`s with pre-defined converter functions. If these types are used in the decorated function, the values received from the CLI will be converted and validated accordingly.
 
 | Name                     | Type                        | Description                                                                                                                             |
 | ------------------------ | --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
@@ -619,3 +619,21 @@ The package includes several custom types implemented as `TypeVar`s with pre-def
 | `ExistingFilePathOrDash` | `Union[Path, Literal["-"]]` | Returns an existing file path but also accepts `"-"` (typically used to indicate that a function should read from standard input).      |
 | `ExistingDirPathOrDash`  | `Union[Path, Literal["-"]]` | Returns an existing directory path but also accepts `"-"` (typically used to indicate that a function should read from standard input). |
 | `PathOrDash`             | `Union[Path, Literal["-"]]` | Returns a path but also accepts `"-"` (typically used to indicate that a function should read from standard input).                     |
+| `UUID`                   | `UUID`                      | Converts a value to a UUID.                                                                                                             |
+| `StrOrUUID`              | `Union[str, UUID]`          | Converts a value to a UUID if valid, otherwise returns the string.                                                                      |
+
+#### `get_list_converter`
+
+Helper function that creates a list converter that takes a string of list items separated by a delimiter and returns a list of items of a given type. This can be useful if you prefer lists to be defined as comma-separated strings on the CLI instead of via repeated arguments.
+
+```python
+@cli.command("hello", items=Arg("--items", converter=get_list_converter(str)))
+def hello(items: List[str]) -> None:
+    print(items)
+```
+
+| Argument    | Type                                       | Description                                                                                                   |
+| ----------- | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------- |
+| `type_func` | `Callable[[Any], Union[bool, int, float]]` | The function to convert the list items. Can be a builtin like `str` or `int`, or a custom converter function. |
+| `delimiter` | `str`                                      | Delimiter of the string. Defaults to `","`.                                                                   |
+| **RETURNS** | `Callable[[str], List]`                    | Converter function that converts a string to a list of the given type.                                        |

@@ -2,6 +2,7 @@ from typing import Any, Callable, Iterable, Type, Union, Optional, Dict, Tuple
 from typing import List, Literal, NewType, get_args, get_origin, TypeVar
 from typing import TypedDict, cast
 from enum import Enum
+from uuid import UUID
 from dataclasses import dataclass
 from pathlib import Path
 import inspect
@@ -215,17 +216,10 @@ def deserialize_type(
     data: StaticArg,
     converters: ConvertersType = SimpleFrozenDict(),
 ) -> ArgTypeType:
-    # Setting some common defaults here to handle out-of-the-box
-    if data["type"] is None:
+    # No type or special args with no type
+    if data["type"] is None or data["action"] in ("store_true", "count"):
         return None
-    types_map = {**BASE_TYPES_MAP}
-    for value in DEFAULT_CONVERTERS.values():
-        types_map[stringify_type(value)] = value  # type: ignore
-    if data["action"] in ("store_true", "count"):  # special args with no type
-        return None
-    if data["type"] in types_map:
-        return types_map[data["type"]]
-    # Handle unknown types: we use the orig_type here, since this corresponds to
+    # Handle custom types: we use the orig_type here, since this corresponds to
     # what was actually set as an argument type hint
     orig_type = data["orig_type"]
     if orig_type is None:
@@ -238,6 +232,12 @@ def deserialize_type(
         origin = orig_type.split("[", 1)[0]
         if origin in converters_map:
             return converters_map[orig_type.split("[", 1)[0]]
+    # Check defaults last to honor custom converters for builtins
+    types_map = {**BASE_TYPES_MAP}
+    for value in DEFAULT_CONVERTERS.values():
+        types_map[stringify_type(value)] = value  # type: ignore
+    if data["type"] in types_map:
+        return types_map[data["type"]]
     return str
 
 
@@ -405,6 +405,31 @@ def expand_error_subclasses(
     return output
 
 
+_InT = TypeVar("_InT", bound=Union[str, int, float])
+
+
+def get_list_converter(
+    type_func: Callable[[Any], _InT] = str, delimiter: str = ","
+) -> Callable[[str], List[_InT]]:
+    def converter(value: str) -> List[_InT]:
+        if not value:
+            return []
+        if value.startswith("[") and value.endswith("]"):
+            value = value[1:-1]
+        result = []
+        for p in value.split(delimiter):
+            p = p.strip()
+            if p.startswith("'") and p.endswith("'"):
+                p = p[1:-1]
+            if p.startswith('"') and p.endswith('"'):
+                p = p[1:-1]
+            p = type_func(p.strip())
+            result.append(p)
+        return result
+
+    return converter
+
+
 def convert_existing_path(path_str: str) -> Path:
     path = Path(path_str)
     if not path.exists():
@@ -450,6 +475,17 @@ def convert_path_or_dash(path_str: str) -> Union[Path, str]:
     return Path(path_str)
 
 
+def convert_uuid(value: str) -> UUID:
+    return UUID(value)
+
+
+def convert_str_or_uuid(value: str) -> Union[str, UUID]:
+    try:
+        return UUID(value)
+    except ValueError:
+        return value
+
+
 # Custom path types for custom converters
 ExistingPath = NewType("ExistingPath", Path)
 ExistingFilePath = NewType("ExistingFilePath", Path)
@@ -459,6 +495,7 @@ ExistingPathOrDash = Union[ExistingPath, Literal["-"]]
 ExistingFilePathOrDash = Union[ExistingFilePath, Literal["-"]]
 ExistingDirPathOrDash = Union[ExistingDirPath, Literal["-"]]
 PathOrDash = Union[Path, Literal["-"]]
+StrOrUUID = Union[str, UUID]
 
 
 DEFAULT_CONVERTERS: ConvertersType = {
@@ -469,4 +506,6 @@ DEFAULT_CONVERTERS: ConvertersType = {
     ExistingFilePathOrDash: convert_existing_file_path_or_dash,
     ExistingDirPathOrDash: convert_existing_dir_path_or_dash,
     PathOrDash: convert_path_or_dash,
+    UUID: convert_uuid,
+    StrOrUUID: convert_str_or_uuid,
 }
