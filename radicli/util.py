@@ -2,6 +2,7 @@ from typing import Any, Callable, Iterable, Type, Union, Optional, Dict, Tuple
 from typing import List, Literal, NewType, get_args, get_origin, TypeVar
 from typing import TypedDict, cast
 from enum import Enum
+from uuid import UUID
 from dataclasses import dataclass
 from pathlib import Path
 import inspect
@@ -405,6 +406,18 @@ def expand_error_subclasses(
     return output
 
 
+_InT = TypeVar("_InT", bound=Union[str, int, float])
+
+
+def get_list_converter(
+    type_func: Callable[[Any], _InT] = str, delimiter: str = ","
+) -> Callable[[str], List[_InT]]:
+    def converter(text: str) -> List[_InT]:
+        return [type_func(t.strip()) for t in text.split(delimiter)] if text else []
+
+    return converter
+
+
 def convert_existing_path(path_str: str) -> Path:
     path = Path(path_str)
     if not path.exists():
@@ -450,6 +463,17 @@ def convert_path_or_dash(path_str: str) -> Union[Path, str]:
     return Path(path_str)
 
 
+def convert_uuid(value: str) -> UUID:
+    return UUID(value)
+
+
+def convert_str_or_uuid(value: str) -> Union[str, UUID]:
+    try:
+        return UUID(value)
+    except ValueError:
+        return value
+
+
 # Custom path types for custom converters
 ExistingPath = NewType("ExistingPath", Path)
 ExistingFilePath = NewType("ExistingFilePath", Path)
@@ -459,6 +483,7 @@ ExistingPathOrDash = Union[ExistingPath, Literal["-"]]
 ExistingFilePathOrDash = Union[ExistingFilePath, Literal["-"]]
 ExistingDirPathOrDash = Union[ExistingDirPath, Literal["-"]]
 PathOrDash = Union[Path, Literal["-"]]
+StrOrUUID = Union[str, UUID]
 
 
 DEFAULT_CONVERTERS: ConvertersType = {
@@ -469,4 +494,6 @@ DEFAULT_CONVERTERS: ConvertersType = {
     ExistingFilePathOrDash: convert_existing_file_path_or_dash,
     ExistingDirPathOrDash: convert_existing_dir_path_or_dash,
     PathOrDash: convert_path_or_dash,
+    UUID: convert_uuid,
+    StrOrUUID: convert_str_or_uuid,
 }
