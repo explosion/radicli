@@ -216,17 +216,10 @@ def deserialize_type(
     data: StaticArg,
     converters: ConvertersType = SimpleFrozenDict(),
 ) -> ArgTypeType:
-    # Setting some common defaults here to handle out-of-the-box
-    if data["type"] is None:
+    # No type or special args with no type
+    if data["type"] is None or data["action"] in ("store_true", "count"):
         return None
-    types_map = {**BASE_TYPES_MAP}
-    for value in DEFAULT_CONVERTERS.values():
-        types_map[stringify_type(value)] = value  # type: ignore
-    if data["action"] in ("store_true", "count"):  # special args with no type
-        return None
-    if data["type"] in types_map:
-        return types_map[data["type"]]
-    # Handle unknown types: we use the orig_type here, since this corresponds to
+    # Handle custom types: we use the orig_type here, since this corresponds to
     # what was actually set as an argument type hint
     orig_type = data["orig_type"]
     if orig_type is None:
@@ -239,6 +232,12 @@ def deserialize_type(
         origin = orig_type.split("[", 1)[0]
         if origin in converters_map:
             return converters_map[orig_type.split("[", 1)[0]]
+    # Check defaults last to honor custom converters for builtins
+    types_map = {**BASE_TYPES_MAP}
+    for value in DEFAULT_CONVERTERS.values():
+        types_map[stringify_type(value)] = value  # type: ignore
+    if data["type"] in types_map:
+        return types_map[data["type"]]
     return str
 
 
