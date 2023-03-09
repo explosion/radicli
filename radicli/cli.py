@@ -114,6 +114,7 @@ class Command:
                 default=sig_defaults[param],
                 skip_resolve=converter is not None,
                 get_converter=get_converter,
+                has_converter=converter is not None,
             )
             arg.help = join_strings(arg.help, f"({format_type(arg.display_type)})")
             cli_args.append(arg)
