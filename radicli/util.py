@@ -365,9 +365,20 @@ def stringify_type(arg_type: Any) -> Optional[str]:
 def format_type(arg_type: Any) -> Optional[str]:
     """Get a pretty-printed string for a type."""
     type_str = stringify_type(arg_type)
-    if isinstance(arg_type, type(NewType)) and hasattr(arg_type, "__supertype__"):  # type: ignore
-        supertype = stringify_type(arg_type.__supertype__)
-        return f"{type_str} ({supertype})"  # type: ignore
+    # Hacky check for cross-platform supertypes for NewType custom types
+    if (
+        (
+            # Python < 3.10
+            hasattr(arg_type, "__qualname__")
+            and arg_type.__qualname__.startswith("NewType")
+        )
+        # Python 3.10+
+        or (hasattr(arg_type, "__class__") and arg_type.__class__ is NewType)
+    ) and (
+        hasattr(arg_type, "__supertype__")
+    ):  # type: ignore
+        supertype = stringify_type(arg_type.__supertype__)  # type: ignore
+        return f"{type_str} ({supertype})"
     return type_str
 
 
