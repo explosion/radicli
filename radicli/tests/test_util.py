@@ -1,5 +1,7 @@
+import typing
 from typing import Union, Generic, List, TypeVar
 from pathlib import Path
+import pathlib
 from uuid import UUID
 import pytest
 import shutil
@@ -23,6 +25,12 @@ class CustomGeneric(Generic[_KindT]):
         (CustomGeneric[str], "CustomGeneric[str]"),
         (UUID, "UUID"),
         (shutil.rmtree, "rmtree"),
+        (typing.List[pathlib.Path], "List[Path]"),
+        (
+            typing.Dict[Union[str, int], Union[str, pathlib.Path, int]],
+            "Dict[Union[str, int], Union[str, Path, int]]",
+        ),
+        (Union[str, typing.Tuple[str, Path]], "Union[str, Tuple[str, Path]]"),
         ("foo.bar", "foo.bar"),
         (None, None),
     ],
