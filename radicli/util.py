@@ -249,6 +249,7 @@ def get_arg(
     orig_type: Union[ArgTypeType, str] = None,
     default: Optional[Any] = DEFAULT_PLACEHOLDER,
     get_converter: Optional[Callable[[Type], Optional[ConverterType]]] = None,
+    has_converter: bool = False,
     skip_resolve: bool = False,
 ) -> ArgparseArg:
     """Generate an argument to add to argparse and interpret types if possible."""
@@ -259,6 +260,7 @@ def get_arg(
         help=orig_arg.help,
         default=default,
         orig_type=orig_type,
+        has_converter=has_converter,
     )
     if orig_arg.count:
         arg.action = "count"
@@ -364,7 +366,8 @@ def format_type(arg_type: Any) -> Optional[str]:
     """Get a pretty-printed string for a type."""
     type_str = stringify_type(arg_type)
     if isinstance(arg_type, type(NewType)) and hasattr(arg_type, "__supertype__"):  # type: ignore
-        return f"{type_str} {arg_type.__name__}"  # type: ignore
+        supertype = stringify_type(arg_type.__supertype__)
+        return f"{type_str} ({supertype})"  # type: ignore
     return type_str
 
 

@@ -8,11 +8,11 @@ import tempfile
 import shutil
 from zipfile import ZipFile
 from pathlib import Path
-from radicli import Radicli, StaticRadicli, Arg, get_arg, ArgparseArg
+from radicli import Radicli, StaticRadicli, Arg, get_arg, ArgparseArg, Command
 from radicli.util import CommandNotFoundError, CliParserError
 from radicli.util import ExistingPath, ExistingFilePath, ExistingDirPath
 from radicli.util import ExistingFilePathOrDash, DEFAULT_CONVERTERS
-from radicli.util import stringify_type, get_list_converter
+from radicli.util import stringify_type, get_list_converter, format_type
 
 
 @contextmanager
@@ -912,3 +912,44 @@ def test_static_deserialize_types_custom_deserialize(arg_type):
     new_arg = ArgparseArg.from_static_json(arg_json)
     assert new_arg.type is str
     assert new_arg.orig_type == stringify_type(arg.orig_type)
+
+
+@pytest.mark.parametrize(
+    "arg_type,expected_type,expected_str",
+    [
+        (str, str, "str"),
+        (List[str], List[str], "List[str]"),
+        (Optional[List[str]], List[str], "List[str]"),
+        (Union[str, int], str, "str"),
+        (CustomGeneric, CustomGeneric, "CustomGeneric"),
+        (CustomGeneric[str], CustomGeneric[str], "CustomGeneric[str]"),
+        (ExistingFilePath, ExistingFilePath, "ExistingFilePath (Path)"),
+        (ZipFile, ZipFile, "ZipFile"),
+    ],
+)
+def test_cli_arg_display_type(arg_type, expected_type, expected_str):
+    split_string = get_list_converter(str)
+
+    def convert_zipfile(value: str) -> ZipFile:
+        return ZipFile(value, "r")
+
+    def convert_generic(value: str) -> str:
+        return f"generic: {value}"
+
+    converters = {
+        **DEFAULT_CONVERTERS,
+        ZipFile: convert_zipfile,  # new type with custom converter
+        List[str]: split_string,
+        CustomGeneric: convert_generic,
+        CustomGeneric[str]: str,
+    }
+
+    def test(test: arg_type):
+        ...
+
+    cmd = Command.from_function(
+        "test", {"test": Arg("--test")}, test, converters=converters
+    )
+    arg = cmd.args[0]
+    assert arg.display_type == expected_type
+    assert format_type(arg.display_type) == expected_str
