@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 import inspect
 import argparse
+import re
 
 # We need this Iterable type, which is the type origin of types.Iterable
 try:
@@ -358,8 +359,23 @@ def stringify_type(arg_type: Any) -> Optional[str]:
             type_str = f"{type_str}[{', '.join(type_args)}]"
         return type_str
     type_str = str(arg_type)
-    split_type = type_str.rsplit(".", 1)
-    return split_type[1] if len(split_type) == 2 else type_str
+    return _stringify_type(str(arg_type))
+
+
+subtype_matcher = re.compile(r"\[(.*)\]")
+
+
+def _stringify_type(type_str: str) -> str:
+    parts = []
+    split_type = subtype_matcher.split(type_str)
+    first = split_type.pop(0)
+    split_first = first.rsplit(".", 1)
+    parts.append(split_first[1] if len(split_first) == 2 else first)
+    for substr in split_type:
+        if substr:
+            objs = [_stringify_type(sub.strip()) for sub in substr.split(",")]
+            parts.extend(["[", ", ".join(objs), "]"])
+    return "".join(parts)
 
 
 def format_type(arg_type: Any) -> Optional[str]:
