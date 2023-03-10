@@ -290,7 +290,9 @@ class Radicli:
         try:
             yield
         except tuple(errors_map.keys()) as e:
-            handler = errors_map[e.__class__]
+            handler = errors_map.get(e.__class__)
+            if not handler:
+                raise e
             err_code = handler(e)
             if err_code is not None:
                 sys.exit(err_code)
