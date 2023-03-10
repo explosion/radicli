@@ -56,6 +56,26 @@ $ python cli.py Alex --age 35 --greet
 Hello Alex (35)!
 ```
 
+Alternatively, you can also use `Radicli.call`:
+
+```python
+# cli.py
+from radicli import Radicli, Arg
+
+def hello(name: str, age: int):
+     print(f"Hello {name} ({age})!")
+
+if __name__ == "__main__":
+    args = dict(name=Arg(help="Your name"), age=Arg("--age", "-a", help="Your age"))
+    command = Command.from_function("hello", args, hello)
+    Radicli().call(command)
+```
+
+```
+$ python cli.py Alex --age 35
+Hello Alex (35)!
+```
+
 ### Subcommands
 
 `radicli` supports one level of nested subcommands. The parent command may exist independently, but it doesn't have to.
