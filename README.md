@@ -502,6 +502,20 @@ if __name__ == "__main__":
 | -------- | --------------------- | ----------------------------------------------------------------------------------------- |
 | `args`   | `Optional[List[str]]` | Optional command to pass in. Will be read from `sys.argv` if not set (standard use case). |
 
+#### <kbd>method</kbd> `Radicli.call`
+
+Call a command with args.
+
+```python
+command = cli.commands["hello"]
+cli.call(command, ["Alex", "--age", "35"])
+```
+
+| Argument  | Type                  | Description                                                                               |
+| --------- | --------------------- | ----------------------------------------------------------------------------------------- |
+| `command` | `Command`             | The command.                                                                              |
+| `args`    | `Optional[List[str]]` | Optional command to pass in. Will be read from `sys.argv` if not set (standard use case). |
+
 #### <kbd>method</kbd> `Radicli.parse`
 
 Parse a list of arguments for a given command. Typically internals, but can also be used for testing.

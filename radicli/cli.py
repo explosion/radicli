@@ -6,6 +6,7 @@ from inspect import signature
 from pathlib import Path
 from contextlib import contextmanager
 import json
+import copy
 
 from .parser import ArgumentParser, HelpFormatter
 from .util import Arg, ArgparseArg, get_arg, join_strings, format_type, format_table
@@ -248,6 +249,15 @@ class Radicli:
             name=name, func=func, args=[], description=description, is_placeholder=True
         )
         self.commands[name] = dummy
+
+    def call(self, command: Command, args: Optional[List[str]] = None) -> None:
+        """Call a single command."""
+        run_args = args if args is not None else [*sys.argv[1:]]
+        cmd = copy.deepcopy(command)
+        cmd.name = ""  # for nicer display in help text
+        values = self.parse(run_args, cmd)
+        with self.handle_errors():
+            command.func(**values)
 
     def run(self, args: Optional[List[str]] = None) -> None:
         """
