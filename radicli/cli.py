@@ -135,6 +135,7 @@ class Radicli:
     version: Optional[str]
     converters: ConvertersType
     extra_key: str
+    fill_defaults: bool
     commands: Dict[str, Command]
     subcommands: Dict[str, Dict[str, Command]]
     errors: ErrorHandlersType
@@ -151,6 +152,7 @@ class Radicli:
         converters: ConvertersType = SimpleFrozenDict(),
         errors: Optional[ErrorHandlersType] = None,
         extra_key: str = DEFAULT_EXTRA_KEY,
+        fill_defaults: bool = True,
     ) -> None:
         """Initialize the CLI and create the registry."""
         self.prog = prog
@@ -159,6 +161,7 @@ class Radicli:
         self.converters = dict(DEFAULT_CONVERTERS)  # make sure to copy
         self.converters.update(converters)
         self.extra_key = extra_key
+        self.fill_defaults = fill_defaults
         self.commands = {}
         self.subcommands = {}
         self.errors = dict(errors) if errors is not None else {}
@@ -377,6 +380,12 @@ class Radicli:
             if arg.id == self.extra_key:
                 continue
             func_args, func_kwargs = arg.to_argparse()
+            # Suppress all argument defaults and mark options without defaults
+            # as required
+            if not self.fill_defaults:
+                func_kwargs["default"] = DEFAULT_PLACEHOLDER
+                if arg.arg.option:
+                    func_kwargs["required"] = arg.default is DEFAULT_PLACEHOLDER
             parser.add_argument(*func_args, **func_kwargs)
 
     def _validate(
@@ -396,7 +405,7 @@ class Radicli:
         for arg in command.args:
             if arg.id not in values or values[arg.id] is DEFAULT_PLACEHOLDER:
                 required.append(arg.arg.option or arg.id)
-        if required and not allow_partial:
+        if required and self.fill_defaults and not allow_partial:
             err = f"the following arguments are required: {', '.join(required)}"
             raise CliParserError(err)
         return values
