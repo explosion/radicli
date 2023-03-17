@@ -953,3 +953,35 @@ def test_cli_arg_display_type(arg_type, expected_type, expected_str):
     arg = cmd.args[0]
     assert arg.display_type == expected_type
     assert format_type(arg.display_type) == expected_str
+
+
+def test_cli_no_defaults():
+    cli = Radicli(fill_defaults=False)
+    ran = False
+
+    @cli.command(
+        "test",
+        a=Arg(),
+        b=Arg(),
+        c=Arg("--c", "-C"),
+        d=Arg("--d", "-D"),
+        e=Arg("--e", "-E"),
+    )
+    def test(a: str, b: str = "1", *, c: int = 1, d: bool = False, e: str = "yo"):
+        assert a == "hello"
+        assert b == "1"
+        assert c == 3
+        assert d is True
+        assert e == "yo"
+        nonlocal ran
+        ran = True
+
+    args = ["hello", "--c", "3", "--d"]
+    parsed = cli.parse(args, cli.commands["test"])
+    assert parsed == {"a": "hello", "c": 3, "d": True}
+    cli.run(["", *args])
+    assert ran
+    # Make sure that set defaults are still preserved
+    args = ["hello", "--c", "1", "--d"]
+    parsed = cli.parse(args, cli.commands["test"])
+    assert parsed == {"a": "hello", "c": 1, "d": True}
