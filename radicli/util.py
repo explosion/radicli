@@ -314,6 +314,7 @@ def get_arg(
     if inspect.isclass(param_type) and issubclass(param_type, Enum):
         arg.choices = list(param_type.__members__.keys())
         arg.type = lambda value: getattr(param_type, value, value)
+        arg.has_converter = True
         return arg
     if not origin:
         raise UnsupportedTypeError(param, param_type)

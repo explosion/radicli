@@ -3,7 +3,7 @@ from enum import Enum
 import argparse
 import sys
 
-from .util import format_arg_help, CliParserError
+from .util import format_arg_help, CliParserError, DEFAULT_PLACEHOLDER
 
 
 class ArgumentParser(argparse.ArgumentParser):
@@ -13,6 +13,8 @@ class ArgumentParser(argparse.ArgumentParser):
     # Overriding this internal function so we can have more control over how
     # errors are handled and (not) masked internally
     def _get_value(self, action: argparse.Action, arg_string: str) -> Any:
+        if arg_string == DEFAULT_PLACEHOLDER:
+            return DEFAULT_PLACEHOLDER
         type_func = self._registry_get("type", action.type, action.type)
         if not callable(type_func):
             raise argparse.ArgumentError(action, f"{type_func!r} is not callable")
