@@ -380,12 +380,14 @@ class Radicli:
             if arg.id == self.extra_key:
                 continue
             func_args, func_kwargs = arg.to_argparse()
-            # Suppress all argument defaults and mark options without defaults
-            # as required
+            # Suppress all defaults and mark options without defaults as required
             if not self.fill_defaults:
                 func_kwargs["default"] = DEFAULT_PLACEHOLDER
                 if arg.arg.option:
                     func_kwargs["required"] = arg.default is DEFAULT_PLACEHOLDER
+                if arg.help and arg.default is not DEFAULT_PLACEHOLDER:
+                    # Manually add default to help again (now suppressed)
+                    func_kwargs["help"] = f"{arg.help} (default: {arg.default})"
             parser.add_argument(*func_args, **func_kwargs)
 
     def _validate(
