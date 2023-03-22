@@ -9,6 +9,7 @@ import json
 import copy
 
 from .parser import ArgumentParser, HelpFormatter
+from .document import document_cli, DEFAULT_DOCS_COMNENT
 from .util import Arg, ArgparseArg, get_arg, join_strings, format_type, format_table
 from .util import format_arg_help, expand_error_subclasses, SimpleFrozenDict
 from .util import CommandNotFoundError, CliParserError, CommandExistsError
@@ -450,3 +451,19 @@ class Radicli:
         with path.open("w", encoding="utf8") as f:
             f.write(json.dumps(data))
         return path
+
+    def document(
+        self,
+        title: Optional[str] = None,
+        description: Optional[str] = None,
+        comment: Optional[str] = DEFAULT_DOCS_COMNENT,
+        path_root: Path = Path.cwd(),
+    ) -> str:
+        """Generate Markdown-formatted documentation for a CLI."""
+        return document_cli(
+            self,
+            title=title,
+            description=description,
+            comment=comment,
+            path_root=path_root,
+        )

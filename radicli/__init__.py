@@ -1,6 +1,7 @@
 from .cli import Radicli, Command
 from .static import StaticRadicli
 from .parser import ArgumentParser, HelpFormatter
+from .document import document_cli
 from .util import ArgparseArg, Arg, get_arg, format_type, DEFAULT_PLACEHOLDER
 from .util import CommandNotFoundError, CliParserError, CommandExistsError
 from .util import ConverterType, ConvertersType, ErrorHandlersType
@@ -16,6 +17,6 @@ __all__ = [
     "DEFAULT_PLACEHOLDER", "ExistingPath", "ExistingFilePath", "ExistingDirPath",
     "ExistingPathOrDash", "ExistingFilePathOrDash", "PathOrDash",
     "ExistingDirPathOrDash", "StrOrUUID", "StaticRadicli", "StaticData",
-    "get_list_converter",
+    "get_list_converter", "document_cli",
 ]
 # fmt: on
