@@ -2,7 +2,7 @@
 
 # radicli: Radically lightweight command-line interfaces
 
-`radicli` is a small, zero-dependency Python package for creating command line interfaces, built on top of Python's [`argparse`](https://docs.python.org/3/library/argparse.html) module. It introduces minimal overhead, preserves your original Python functions and uses **type hints** to parse values provided on the CLI. It supports all common types out-of-the-box, including complex ones like `List[str]`, `Literal` and `Enum`, and allows registering **custom types** with custom converters, as well as custom CLI-only **error handling** and exporting a **static representation** for faster `--help` and errors.
+`radicli` is a small, zero-dependency Python package for creating command line interfaces, built on top of Python's [`argparse`](https://docs.python.org/3/library/argparse.html) module. It introduces minimal overhead, preserves your original Python functions and uses **type hints** to parse values provided on the CLI. It supports all common types out-of-the-box, including complex ones like `List[str]`, `Literal` and `Enum`, and allows registering **custom types** with custom converters, as well as custom CLI-only **error handling**, exporting a **static representation** for faster `--help` and errors and auto-generated **Markdown documentation**.
 
 > **Important note:** This package aims to be a simple option based on the requirements of our libraries. If you're looking for a more full-featured CLI toolkit, check out [`typer`](https://typer.tiangolo.com), [`click`](https://click.palletsprojects.com) or [`plac`](https://plac.readthedocs.io/en/latest/).
 
@@ -331,6 +331,17 @@ If the CLI is part of a Python package, you can generate the static JSON file du
 
 `StaticRadicli` also provides a `disable` argument to disable static parsing during development (or if a certain environment variable is set). Setting `debug=True` will print an additional start and optional end marker (if the static CLI didn't exit before) to indicate that the static CLI ran.
 
+### Auto-documenting the CLI
+
+The `Radicli.document` method lets you generate a simple Markdown-formatted documentation for your CLI with an optional`title` and `description` added to the top. You can also include this call in your CI or build process to ensure the documentation is always up to date.
+
+```python
+with Path("README.md").open("w", encoding="utf8") as f:
+    f.write(cli.document())
+```
+
+The `path_root` lets you provide a custom `Path` that's used as the relative root for all paths specified as default arguments. This means that absolute paths won't make it into your README.
+
 ## 🎛 API
 
 ### <kbd>dataclass</kbd> `Arg`
@@ -553,6 +564,23 @@ command.func(**values)
 | `subcommands`   | `Dict[str, Command]` | Subcommands of the parent command, if available, keyed by subcommand name. Defaults to `{}`.                           |
 | `allow_partial` | `bool`               | Allow partial parsing and still return the parsed values, even if required arguments are missing. Defaults to `False`. |
 | **RETURNS**     | `Dict[str, Any]`     | The parsed values keyed by argument name that can be passed to the command function.                                   |
+
+#### <kbd>method</kbd> `Radicli.document`
+
+Generate a Markdown-formatted documentation for a CLI.
+
+```python
+with Path("README.md").open("w", encodig="utf8") as f:
+    f.write(cli.document())
+```
+
+| Argument      | Type             | Description                                                                                                                                                                           |
+| ------------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `title`       | `Optional[str]`  | Title to add to the top of the file. Defaults to `None`.                                                                                                                              |
+| `description` | `Optional[str]`  | Description to add to the top of th file. Defaults to `None`.                                                                                                                         |
+| `comment`     | `Optional[str]`  | Text of the HTML comment added to the top of the file, usually indicating that it's auto-generated. If `None`, no comment will be added. Defaults to `"This file is auto-generated"`. |
+| `path_root`   | `Optional[Path]` | Custom path used as relative root for argument defaults of type `Path`, to prevent local absolute paths from ending up in the documentation. Defaults to `None`.                      |
+| **RETURNS**   | `str`            | The Markdown-formatted docs.                                                                                                                                                          |
 
 #### <kbd>method</kbd> `Radicli.to_static`
 
