@@ -985,3 +985,26 @@ def test_cli_no_defaults():
     args = ["hello", "--c", "1", "--d"]
     parsed = cli.parse(args, cli.commands["test"])
     assert parsed == {"a": "hello", "c": 1, "d": True}
+
+
+def test_cli_booleans():
+    cli = Radicli()
+
+    @cli.command(
+        "test",
+        a=Arg("--a"),
+        b=Arg("--b"),
+        c=Arg("--c"),
+    )
+    def test(a: bool, b: bool = False, c: bool = True):
+        ...
+
+    args = ["--a", "--b", "--c"]
+    parsed = cli.parse(args, cli.commands["test"])
+    assert parsed == {"a": True, "b": True, "c": True}
+    args = []
+    parsed = cli.parse(args, cli.commands["test"])
+    assert parsed == {"a": False, "b": False, "c": True}
+    args = ["--no-c"]
+    parsed = cli.parse(args, cli.commands["test"])
+    assert parsed == {"a": False, "b": False, "c": False}
