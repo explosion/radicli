@@ -137,12 +137,6 @@ class BooleanOptionalAction(argparse.Action):
             if option_string.startswith("--"):
                 option_string = "--no-" + option_string[2:]
                 _option_strings.append(option_string)
-        if (
-            help is not None
-            and default is not None
-            and default is not argparse.SUPPRESS
-        ):
-            help += " (default: %(default)s)"
         super().__init__(
             option_strings=_option_strings,
             dest=dest,
