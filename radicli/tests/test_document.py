@@ -46,12 +46,14 @@ def test_document_cli():
         "child",
         arg1=Arg(help="Argument one", converter=convert_my_custom_type),
         arg2=Arg(help="Argument two"),
+        arg3=Arg("--arg3", help="Argument three"),
     )
     def child2(
         arg1: MyCustomType,
         arg2: ExistingFilePath = cast(
             ExistingFilePath, Path(__file__).parent / "__init__.py"
         ),
+        arg3: bool = True,
     ):
         """This is command 3 and its child."""
 
@@ -107,4 +109,5 @@ This is command 3 and its child.
 | --- | --- | --- | --- |
 | `arg1` | `MyCustomType` | Argument one |  |
 | `arg2` | `ExistingFilePath (Path)` | Argument two | `__init__.py` |
+| `--arg3`/`--no-arg3` | `bool` | Argument three | `True` |
 """
