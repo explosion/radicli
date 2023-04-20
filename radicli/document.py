@@ -3,7 +3,7 @@ from collections import defaultdict
 from pathlib import Path
 import re
 
-from .util import format_type, DEFAULT_PLACEHOLDER
+from .util import format_type, BooleanOptionalAction, DEFAULT_PLACEHOLDER
 
 if TYPE_CHECKING:
     from .cli import Radicli, Command
@@ -61,6 +61,9 @@ def _command(
         table = []
         for ap_arg in cmd.args:
             name = f"`{ap_arg.arg.option or ap_arg.id}`"
+            if ap_arg.action == BooleanOptionalAction and ap_arg.default is True:
+                assert ap_arg.arg.option
+                name += f"/`--no-{ap_arg.arg.option[2:]}`"
             if ap_arg.arg.short:
                 name += ", " + f"`{ap_arg.arg.short}`"
             default = ""
