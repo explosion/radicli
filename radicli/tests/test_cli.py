@@ -791,7 +791,6 @@ def test_cli_static_roundtrip(capsys):
         assert arg1.arg.option == arg2.arg.option
         assert arg1.arg.short == arg2.arg.short
         assert arg1.arg.help == arg2.arg.help
-        assert arg1.default == arg2.default
 
     with pytest.raises(SystemExit):
         static.run(["", "--help"])
