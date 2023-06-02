@@ -32,7 +32,7 @@ class StaticArg(TypedDict):
     option: Optional[str]
     short: Optional[str]
     orig_help: Optional[str]
-    default: Optional[Union[bool, str]]
+    default: str
     help: Optional[str]
     action: Optional[str]
     choices: Optional[List[str]]
