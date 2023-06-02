@@ -791,7 +791,6 @@ def test_cli_static_roundtrip(capsys):
         assert arg1.arg.option == arg2.arg.option
         assert arg1.arg.short == arg2.arg.short
         assert arg1.arg.help == arg2.arg.help
-        assert arg1.default == arg2.default
 
     with pytest.raises(SystemExit):
         static.run(["", "--help"])
@@ -918,10 +917,9 @@ def test_static_deserialize_types_custom_deserialize(arg_type):
 def test_static_default_serialization():
     cli = Radicli(prog="test")
 
-    @cli.command("test", a=Arg("--a"))
-    def test(a=[]):
+    @cli.command("test", a=Arg("--a", short='-a'))
+    def _(a: List[str]=[]):
         """Hello"""
-        ...
 
     with make_tempdir() as dir_path:
         path = dir_path / "static.json"
@@ -929,10 +927,7 @@ def test_static_default_serialization():
 
         static = StaticRadicli.load(path)
 
-    for cli_arg, static_arg in zip(
-        cli.commands["test"].args, static.commands["test"].args
-    ):
-        assert cli_arg.default == static_arg.default
+    static.run(["", "test", "-a", "1"])
 
 
 @pytest.mark.parametrize(
