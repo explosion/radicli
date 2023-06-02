@@ -243,7 +243,9 @@ class ArgparseArg:
             arg=Arg(data["option"], data["short"], help=data["orig_help"]),
             type=deserialize_type(data, converters),
             orig_type=data["orig_type"],
-            default=DEFAULT_PLACEHOLDER
+            default=[]
+            if data['action'] == 'append'
+            else DEFAULT_PLACEHOLDER
             if data["default"] == DEFAULT_PLACEHOLDER
             else data["default"],
             help=data["help"],
