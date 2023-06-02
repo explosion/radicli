@@ -8,6 +8,7 @@ from pathlib import Path
 import inspect
 import argparse
 import re
+import json
 
 # We need this Iterable type, which is the type origin of types.Iterable
 try:
@@ -218,9 +219,9 @@ class ArgparseArg:
             "option": self.arg.option,
             "short": self.arg.short,
             "orig_help": self.arg.help,
-            "default": str(self.default)
-            if self.default not in (False, None)
-            else self.default,
+            "default": DEFAULT_PLACEHOLDER
+            if self.default == DEFAULT_PLACEHOLDER
+            else json.dumps(self.default),
             "help": self.help,
             "action": str(self.action) if self.action else None,
             "choices": list(c.value if isinstance(c, Enum) else c for c in self.choices)
@@ -245,7 +246,7 @@ class ArgparseArg:
             orig_type=data["orig_type"],
             default=DEFAULT_PLACEHOLDER
             if data["default"] == DEFAULT_PLACEHOLDER
-            else data["default"],
+            else json.loads(data["default"]),
             help=data["help"],
             action=data["action"],
             choices=data["choices"],
