@@ -914,6 +914,26 @@ def test_static_deserialize_types_custom_deserialize(arg_type):
     assert new_arg.orig_type == stringify_type(arg.orig_type)
 
 
+def test_static_default_serialization():
+    cli = Radicli(prog="test")
+
+    @cli.command("test", a=Arg("--a"))
+    def test(a=[]):
+        """Hello"""
+        ...
+
+    with make_tempdir() as dir_path:
+        path = dir_path / "static.json"
+        cli.to_static(path)
+
+        static = StaticRadicli.load(path)
+
+    for cli_arg, static_arg in zip(
+        cli.commands["test"].args, static.commands["test"].args
+    ):
+        assert cli_arg.default == static_arg.default
+
+
 @pytest.mark.parametrize(
     "arg_type,expected_type,expected_str",
     [
