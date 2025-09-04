@@ -1,4 +1,4 @@
-from typing import List, Iterator, Optional, Literal, TypeVar, Generic, Type, Union
+from typing import List, Iterator, Optional, Literal, TypeVar, Generic, Type, Union, cast
 from enum import Enum
 from dataclasses import dataclass
 import pytest
@@ -11,7 +11,7 @@ from pathlib import Path
 from radicli import Radicli, StaticRadicli, Arg, get_arg, ArgparseArg, Command
 from radicli.util import CommandNotFoundError, CliParserError
 from radicli.util import ExistingPath, ExistingFilePath, ExistingDirPath
-from radicli.util import ExistingFilePathOrDash, DEFAULT_CONVERTERS
+from radicli.util import ExistingFilePathOrDash, DEFAULT_CONVERTERS, ConvertersType
 from radicli.util import stringify_type, get_list_converter, format_type
 
 
@@ -312,7 +312,7 @@ class CustomGeneric(Generic[_KindT]):
 
 def test_cli_converters_generics():
     converters = {CustomGeneric: lambda value: f"generic: {value}"}
-    cli = Radicli(converters=converters)
+    cli = Radicli(converters=cast(ConvertersType, converters))
     ran = False
 
     @cli.command("test", a=Arg("--a"))
@@ -960,7 +960,7 @@ def test_cli_arg_display_type(arg_type, expected_type, expected_str):
         CustomGeneric[str]: str,
     }
 
-    def test(test: arg_type):
+    def test(test: arg_type):  # type: ignore
         ...
 
     cmd = Command.from_function(
