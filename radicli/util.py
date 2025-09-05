@@ -31,7 +31,7 @@ class StaticArg(TypedDict):
     option: Optional[str]
     short: Optional[str]
     orig_help: Optional[str]
-    default: str
+    default: Union[str, bool, None]
     help: Optional[str]
     action: Optional[str]
     choices: Optional[List[str]]
@@ -74,7 +74,7 @@ class SimpleFrozenDict(dict):
     def pop(self, key: Any, default=None):
         raise NotImplementedError(self.error)
 
-    def update(self, other, **kwargs):
+    def update(self, *args, **kwargs):
         raise NotImplementedError(self.error)
 
 
