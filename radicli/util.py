@@ -296,6 +296,9 @@ def get_arg(
     skip_resolve: bool = False,
 ) -> ArgparseArg:
     """Generate an argument to add to argparse and interpret types if possible."""
+    if isinstance(param_type, str):
+        # Windows may pass param_types as str
+        param_type = BASE_TYPES_MAP.get(param_type, None)
     arg = ArgparseArg(
         id=param,
         arg=orig_arg,

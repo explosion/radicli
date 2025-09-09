@@ -5,7 +5,7 @@ import pathlib
 from uuid import UUID
 import pytest
 import shutil
-from radicli.util import stringify_type, get_list_converter
+from radicli.util import stringify_type, get_list_converter, get_arg, Arg
 
 _KindT = TypeVar("_KindT", bound=Union[str, int, float, Path])
 
@@ -61,3 +61,13 @@ def test_stringify_type(arg_type, expected):
 def test_get_list_converter(item_type, value, expected):
     converter = get_list_converter(item_type)
     assert converter(value) == expected
+
+def test_get_arg_string_type():
+    arg_info = Arg()
+    result = get_arg("test_param", arg_info, "str")
+    assert result.type is str
+
+def test_get_arg_regular_type():
+    arg_info = Arg()
+    result = get_arg("test_param", arg_info, int)
+    assert result.type is int
