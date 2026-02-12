@@ -1,4 +1,14 @@
-from typing import List, Iterator, Optional, Literal, TypeVar, Generic, Type, Union, cast
+from typing import (
+    List,
+    Iterator,
+    Optional,
+    Literal,
+    TypeVar,
+    Generic,
+    Type,
+    Union,
+    cast,
+)
 from enum import Enum
 from dataclasses import dataclass
 import pytest
@@ -137,8 +147,7 @@ def test_cli_required():
     cli = Radicli()
 
     @cli.command("test", a=Arg(), b=Arg("--b"), c=Arg("--c"), d=Arg("--d"))
-    def test(a: str, b: str, c: int, d: int = 0):
-        ...
+    def test(a: str, b: str, c: int, d: int = 0): ...
 
     with pytest.raises(CliParserError) as err:
         cli.run(["", "test", "hello", "--c", "1"])
@@ -256,8 +265,7 @@ def test_cli_invalid_converter():
         raise TypeError(error_msg)
 
     @cli.command("test", a=Arg("--a", converter=converter))
-    def test(a: str):
-        ...
+    def test(a: str): ...
 
     with pytest.raises(CliParserError, match=error_msg):
         cli.run(["", "test", "--a", "hello"])
@@ -306,8 +314,7 @@ def test_cli_global_converters():
 _KindT = TypeVar("_KindT", bound=Union[str, int, float, Path])
 
 
-class CustomGeneric(Generic[_KindT]):
-    ...
+class CustomGeneric(Generic[_KindT]): ...
 
 
 def test_cli_converters_generics():
@@ -328,8 +335,7 @@ def test_cli_converters_generics():
 def test_cli_converters_generics_multiple():
     _KindT = TypeVar("_KindT")
 
-    class CustomGeneric(Generic[_KindT]):
-        ...
+    class CustomGeneric(Generic[_KindT]): ...
 
     converters = {
         CustomGeneric: lambda value: f"generic: {value}",
@@ -917,8 +923,8 @@ def test_static_deserialize_types_custom_deserialize(arg_type):
 def test_static_default_serialization():
     cli = Radicli(prog="test")
 
-    @cli.command("test", a=Arg("--a", short='-a'))
-    def _(a: List[str]=[]):
+    @cli.command("test", a=Arg("--a", short="-a"))
+    def _(a: List[str] = []):
         """Hello"""
 
     with make_tempdir() as dir_path:
@@ -1012,8 +1018,7 @@ def test_cli_booleans():
         b=Arg("--b"),
         c=Arg("--c"),
     )
-    def test(a: bool, b: bool = False, c: bool = True):
-        ...
+    def test(a: bool, b: bool = False, c: bool = True): ...
 
     args = ["--a", "--b", "--c"]
     parsed = cli.parse(args, cli.commands["test"])

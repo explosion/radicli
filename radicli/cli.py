@@ -16,7 +16,6 @@ from .util import CommandNotFoundError, CliParserError, CommandExistsError
 from .util import ConverterType, ConvertersType, ErrorHandlersType, StaticCommand
 from .util import StaticData, DEFAULT_CONVERTERS, DEFAULT_PLACEHOLDER
 
-
 _CallableT = TypeVar("_CallableT", bound=Callable)
 DEFAULT_EXTRA_KEY = "_extra"
 

@@ -10,8 +10,7 @@ from radicli.util import stringify_type, get_list_converter, get_arg, Arg
 _KindT = TypeVar("_KindT", bound=Union[str, int, float, Path])
 
 
-class CustomGeneric(Generic[_KindT]):
-    ...
+class CustomGeneric(Generic[_KindT]): ...
 
 
 @pytest.mark.parametrize(
@@ -62,10 +61,12 @@ def test_get_list_converter(item_type, value, expected):
     converter = get_list_converter(item_type)
     assert converter(value) == expected
 
+
 def test_get_arg_string_type():
     arg_info = Arg()
     result = get_arg("test_param", arg_info, "str")
     assert result.type is str
+
 
 def test_get_arg_regular_type():
     arg_info = Arg()
