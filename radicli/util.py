@@ -219,14 +219,16 @@ class ArgparseArg:
             "option": self.arg.option,
             "short": self.arg.short,
             "orig_help": self.arg.help,
-            "default": str(self.default)
-            if self.default not in (False, None)
-            else self.default,
+            "default": (
+                str(self.default) if self.default not in (False, None) else self.default
+            ),
             "help": self.help,
             "action": str(self.action) if self.action else None,
-            "choices": list(c.value if isinstance(c, Enum) else c for c in self.choices)
-            if self.choices
-            else None,
+            "choices": (
+                list(c.value if isinstance(c, Enum) else c for c in self.choices)
+                if self.choices
+                else None
+            ),
             "has_converter": self.has_converter,
             "type": stringify_type(self.type),
             "orig_type": stringify_type(self.orig_type),
@@ -244,11 +246,15 @@ class ArgparseArg:
             arg=Arg(data["option"], data["short"], help=data["orig_help"]),
             type=deserialize_type(data, converters),
             orig_type=data["orig_type"],
-            default=[]
-            if data['action'] == 'append'
-            else DEFAULT_PLACEHOLDER
-            if data["default"] == DEFAULT_PLACEHOLDER
-            else data["default"],
+            default=(
+                []
+                if data["action"] == "append"
+                else (
+                    DEFAULT_PLACEHOLDER
+                    if data["default"] == DEFAULT_PLACEHOLDER
+                    else data["default"]
+                )
+            ),
             help=data["help"],
             action=data["action"],
             choices=data["choices"],
@@ -468,7 +474,7 @@ def format_arg_help(text: Optional[str], max_width: int = 70) -> str:
 
 
 def expand_error_subclasses(
-    errors: Dict[Type[Exception], ErrorHandlerType]
+    errors: Dict[Type[Exception], ErrorHandlerType],
 ) -> Dict[Type[Exception], ErrorHandlerType]:
     """Map subclasses of errors to their parent's handler."""
     output = {}
