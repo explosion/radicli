@@ -1,6 +1,7 @@
 from typing import Any, Callable, Iterable, Type, Union, Optional, Dict, Tuple
 from typing import List, Literal, NewType, get_args, get_origin, TypeVar
 from typing import TypedDict, cast
+from types import UnionType
 from enum import Enum
 from uuid import UUID
 from dataclasses import dataclass
@@ -328,7 +329,7 @@ def get_arg(
         return arg
     if skip_resolve:
         return arg
-    if origin is Union:
+    if origin in (Union, UnionType):  # UnionType is | syntax
         if type(None) in args and default is DEFAULT_PLACEHOLDER:
             default = None
         arg_types = [a for a in args if a != type(None)]  # noqa: E721
