@@ -1013,13 +1013,22 @@ def test_cli_optional_syntax():
     cli = Radicli()
 
     @cli.command("test", a=Arg("--a"), b=Arg("--b"))
-    def test(a: str | None, b: Optional[str]):
-        ...
+    def test(a: str | None, b: Optional[str]): ...
 
     parsed = cli.parse(["--a", "hello"], cli.commands["test"])
     assert parsed == {"a": "hello", "b": None}
     parsed = cli.parse(["--b", "hello"], cli.commands["test"])
     assert parsed == {"a": None, "b": "hello"}
+
+
+def test_cli_pipe_syntax():
+    cli = Radicli()
+
+    @cli.command("test", a=Arg("--a"), b=Arg("--b"))
+    def test(a: float | int, b: Path | str): ...
+
+    parsed = cli.parse(["--a", "1", "--b", "/path"], cli.commands["test"])
+    assert parsed == {"a": 1.0, "b": Path("/path")}
 
 
 def test_cli_booleans():
