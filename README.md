@@ -12,7 +12,7 @@
 
 ## ⏳ Installation
 
-Note that `radicli` currently requires **Python 3.8+**.
+Note that `radicli` currently requires **Python 3.10+**.
 
 ```bash
 pip install radicli
