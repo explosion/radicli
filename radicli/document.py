@@ -71,7 +71,10 @@ def _command(
                 if isinstance(ap_arg.default, Path):
                     default_value = ap_arg.default
                     if path_root is not None:
-                        default_value = default_value.relative_to(path_root)
+                        try:
+                            default_value = default_value.relative_to(path_root)
+                        except ValueError:
+                            pass
                 else:
                     default_value = repr(ap_arg.default)
                 default = f"`{default_value}`"
