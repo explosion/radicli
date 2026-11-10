@@ -65,6 +65,19 @@ def test_document_cli():
     assert docs == EXPECTED.strip()
 
 
+def test_document_cli_path_default_outside_root(tmp_path):
+    cli = Radicli(prog="rdc", help="This is a CLI")
+    outside_root = Path("/etc/rdc/out.txt")
+
+    @cli.command("command1", out=Arg("--out", help="Output path"))
+    def command1(out: Path = outside_root):
+        """This is command one."""
+        ...
+
+    docs = cli.document(title="Docs", path_root=tmp_path)
+    assert f"`{outside_root}`" in docs
+
+
 EXPECTED = """
 <!-- This file is auto-generated -->
 
